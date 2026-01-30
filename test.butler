@@ -1,0 +1,258 @@
+{
+  "version": 2,
+  "type": "butler_project_backup",
+  "project": {
+    "id": "proj_omnifleet_001",
+    "name": "OmniFleet Enterprise",
+    "platform": "ODC",
+    "description": "A comprehensive logistics and fleet management solution managing vehicles, drivers, routing, and mobile operations.",
+    "createdAt": "2025-01-30T10:00:00.000Z"
+  },
+  "modules": [
+    {
+      "id": "mod_fnd_audit",
+      "projectId": "proj_omnifleet_001",
+      "name": "Audit_Lib",
+      "layer": "Foundation",
+      "description": "Centralized security logging and compliance auditing for all system events.",
+      "dependencies": []
+    },
+    {
+      "id": "mod_fnd_geo",
+      "projectId": "proj_omnifleet_001",
+      "name": "GeoLocation_IS",
+      "layer": "Foundation",
+      "description": "Integration Service wrapping Google Maps API and GPS calculation logic.",
+      "dependencies": [
+        {
+          "producerModuleId": "mod_fnd_audit",
+          "elements": [
+            { "id": "act_audit_write", "name": "Log_Write", "type": "Action" },
+            { "id": "ent_audit_log", "name": "SystemLog", "type": "Entity" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mod_fnd_style",
+      "projectId": "proj_omnifleet_001",
+      "name": "UI_StyleGuide",
+      "layer": "Foundation",
+      "description": "Contains common UI Blocks, Layouts, and Theme definitions.",
+      "dependencies": []
+    },
+    {
+      "id": "mod_core_fleet",
+      "projectId": "proj_omnifleet_001",
+      "name": "Fleet_CS",
+      "layer": "Core",
+      "description": "Core Service managing Vehicle lifecycle, maintenance schedules, and inventory.",
+      "dependencies": [
+        {
+          "producerModuleId": "mod_fnd_audit",
+          "elements": [{ "id": "act_audit_write", "name": "Log_Write", "type": "Action" }]
+        }
+      ]
+    },
+    {
+      "id": "mod_core_hr",
+      "projectId": "proj_omnifleet_001",
+      "name": "Personnel_CS",
+      "layer": "Core",
+      "description": "Human Resources logic for Drivers, Shifts, and Certifications.",
+      "dependencies": []
+    },
+    {
+      "id": "mod_core_logistics",
+      "projectId": "proj_omnifleet_001",
+      "name": "Logistics_Core",
+      "layer": "Core",
+      "description": "Complex routing algorithms and Shipment tracking logic.",
+      "dependencies": [
+        {
+          "producerModuleId": "mod_fnd_geo",
+          "elements": [{ "id": "act_geo_calc", "name": "Geo_CalcDistance", "type": "Action" }]
+        },
+        {
+          "producerModuleId": "mod_core_fleet",
+          "elements": [{ "id": "ent_veh_01", "name": "Vehicle", "type": "Entity" }]
+        }
+      ]
+    },
+    {
+      "id": "mod_ui_admin",
+      "projectId": "proj_omnifleet_001",
+      "name": "FleetAdmin_Web",
+      "layer": "End-User",
+      "description": "Back-office web portal for fleet managers to dispatch and monitor.",
+      "dependencies": [
+        {
+          "producerModuleId": "mod_core_fleet",
+          "elements": [
+            { "id": "ent_veh_01", "name": "Vehicle", "type": "Entity" },
+            { "id": "act_veh_create", "name": "Vehicle_CreateOrUpdate", "type": "Action" }
+          ]
+        },
+        {
+          "producerModuleId": "mod_fnd_style",
+          "elements": [{ "id": "ui_layout_main", "name": "Layout_Main", "type": "UI" }]
+        }
+      ]
+    },
+    {
+      "id": "mod_ui_mobile",
+      "projectId": "proj_omnifleet_001",
+      "name": "Driver_App",
+      "layer": "End-User",
+      "description": "Mobile application for drivers to view routes and scan packages.",
+      "dependencies": [
+        {
+          "producerModuleId": "mod_core_logistics",
+          "elements": [{ "id": "act_route_get", "name": "Route_GetAssignments", "type": "Action" }]
+        }
+      ]
+    }
+  ],
+  "entities": [
+    {
+      "id": "ent_audit_log", "moduleId": "mod_fnd_audit", "name": "SystemLog", "isPublic": true, "isStatic": false, "description": "High volume audit table",
+      "attributes": [
+        { "id": "att_1", "name": "Id", "dataType": "LongInteger", "isIdentifier": true, "isMandatory": true },
+        { "id": "att_2", "name": "Source", "dataType": "Text", "length": 100, "isMandatory": true, "isIdentifier": false },
+        { "id": "att_3", "name": "Payload", "dataType": "Text", "length": 2000, "isMandatory": false, "isIdentifier": false },
+        { "id": "att_4", "name": "CreatedAt", "dataType": "DateTime", "isMandatory": true, "isIdentifier": false }
+      ]
+    },
+    {
+      "id": "ent_geo_cache", "moduleId": "mod_fnd_geo", "name": "GeoCache", "isPublic": false, "isStatic": false, "description": "API Cache",
+      "attributes": [
+        { "id": "att_5", "name": "AddressHash", "dataType": "Text", "length": 250, "isIdentifier": true, "isMandatory": true },
+        { "id": "att_6", "name": "Lat", "dataType": "Decimal", "isMandatory": true, "isIdentifier": false },
+        { "id": "att_7", "name": "Long", "dataType": "Decimal", "isMandatory": true, "isIdentifier": false }
+      ]
+    },
+    {
+      "id": "ent_veh_01", "moduleId": "mod_core_fleet", "name": "Vehicle", "isPublic": true, "isStatic": false, "description": "Master vehicle data",
+      "attributes": [
+        { "id": "att_8", "name": "Id", "dataType": "LongInteger", "isIdentifier": true, "isMandatory": true },
+        { "id": "att_9", "name": "VIN", "dataType": "Text", "length": 50, "isMandatory": true, "isIdentifier": false },
+        { "id": "att_10", "name": "LicensePlate", "dataType": "Text", "length": 20, "isMandatory": true, "isIdentifier": false },
+        { "id": "att_11", "name": "StatusId", "dataType": "Integer", "isMandatory": true, "isIdentifier": false },
+        { "id": "att_12", "name": "LastMaintenance", "dataType": "Date", "isMandatory": false, "isIdentifier": false }
+      ]
+    },
+    {
+      "id": "ent_veh_02", "moduleId": "mod_core_fleet", "name": "MaintenanceHistory", "isPublic": false, "isStatic": false, "description": "",
+      "attributes": [
+        { "id": "att_13", "name": "Id", "dataType": "LongInteger", "isIdentifier": true, "isMandatory": true },
+        { "id": "att_14", "name": "VehicleId", "dataType": "LongInteger", "isMandatory": true, "isIdentifier": false },
+        { "id": "att_15", "name": "Cost", "dataType": "Currency", "isMandatory": true, "isIdentifier": false }
+      ]
+    },
+    {
+      "id": "ent_hr_01", "moduleId": "mod_core_hr", "name": "DriverProfile", "isPublic": true, "isStatic": false, "description": "",
+      "attributes": [
+        { "id": "att_16", "name": "Id", "dataType": "LongInteger", "isIdentifier": true, "isMandatory": true },
+        { "id": "att_17", "name": "UserId", "dataType": "LongInteger", "isMandatory": true, "isIdentifier": false },
+        { "id": "att_18", "name": "LicenseExpiry", "dataType": "Date", "isMandatory": true, "isIdentifier": false }
+      ]
+    },
+    {
+      "id": "ent_log_ship", "moduleId": "mod_core_logistics", "name": "Shipment", "isPublic": true, "isStatic": false, "description": "",
+      "attributes": [
+        { "id": "att_19", "name": "Id", "dataType": "LongInteger", "isIdentifier": true, "isMandatory": true },
+        { "id": "att_20", "name": "TrackingCode", "dataType": "Text", "length": 50, "isMandatory": true, "isIdentifier": false },
+        { "id": "att_21", "name": "Weight", "dataType": "Decimal", "isMandatory": false, "isIdentifier": false }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "id": "act_audit_write", "moduleId": "mod_fnd_audit", "name": "Log_Write", "type": "Server", "description": "Writes generic log", "isFunction": false, "isPublic": true,
+      "inputs": [{ "id": "v1", "name": "Msg", "dataType": "Text", "isList": false, "isMandatory": true }], "outputs": [], "flowSummary": "",
+      "nodes": [
+        { "id": "n1", "type": "Start", "label": "Start", "posX": 0, "posY": 0 },
+        { "id": "n2", "type": "EntityAction", "label": "CreateLog", "posX": 0, "posY": 100 },
+        { "id": "n3", "type": "End", "label": "End", "posX": 0, "posY": 200 }
+      ],
+      "edges": [{ "id": "e1", "source": "n1", "target": "n2" }, { "id": "e2", "source": "n2", "target": "n3" }]
+    },
+    {
+      "id": "act_geo_calc", "moduleId": "mod_fnd_geo", "name": "Geo_CalcDistance", "type": "Service", "description": "Calculates distance between two points", "isFunction": true, "isPublic": true,
+      "inputs": [], "outputs": [], "flowSummary": "",
+      "nodes": [
+        { "id": "n4", "type": "Start", "label": "Start", "posX": 0, "posY": 0 },
+        { "id": "n5", "type": "JavaScript", "label": "HaversineFormula", "posX": 0, "posY": 100, "data": { "code": "// JS Math logic..." } },
+        { "id": "n6", "type": "End", "label": "End", "posX": 0, "posY": 200 }
+      ],
+      "edges": [{ "id": "e3", "source": "n4", "target": "n5" }, { "id": "e4", "source": "n5", "target": "n6" }]
+    },
+    {
+      "id": "act_veh_create", "moduleId": "mod_core_fleet", "name": "Vehicle_CreateOrUpdate", "type": "Server", "description": "CRUD Wrapper", "isFunction": false, "isPublic": true,
+      "inputs": [{ "id": "v2", "name": "Veh", "dataType": "Record", "isList": false, "isMandatory": true }], "outputs": [], "flowSummary": "",
+      "nodes": [
+        { "id": "n7", "type": "Start", "label": "Start", "posX": 0, "posY": 0 },
+        { "id": "n8", "type": "If", "label": "IsValid", "posX": 0, "posY": 100, "data": { "condition": "Veh.VIN <> \"\"" } },
+        { "id": "n9", "type": "EntityAction", "label": "Create", "posX": -100, "posY": 200 },
+        { "id": "n10", "type": "RaiseException", "label": "Error", "posX": 100, "posY": 200, "data": { "exception": "User", "message": "\"Invalid VIN\"" } },
+        { "id": "n11", "type": "ExecuteServerAction", "label": "Log", "posX": 100, "posY": 300, "data": { "action_name": "Log_Write" } },
+        { "id": "n12", "type": "End", "label": "End", "posX": 0, "posY": 400 }
+      ],
+      "edges": [
+        { "id": "e5", "source": "n7", "target": "n8" },
+        { "id": "e6", "source": "n8", "target": "n9", "label": "True" },
+        { "id": "e7", "source": "n8", "target": "n10", "label": "False" },
+        { "id": "e8", "source": "n10", "target": "n11" },
+        { "id": "e9", "source": "n9", "target": "n12" },
+        { "id": "e10", "source": "n11", "target": "n12" }
+      ]
+    },
+    {
+      "id": "act_maint_check", "moduleId": "mod_core_fleet", "name": "Maintenance_RunDailyCheck", "type": "Server", "description": "SQL-based heavy logic", "isFunction": false, "isPublic": false,
+      "inputs": [], "outputs": [], "flowSummary": "",
+      "nodes": [
+        { "id": "n13", "type": "Start", "label": "Start", "posX": 0, "posY": 0 },
+        { "id": "n14", "type": "SQL", "label": "GetOverdue", "posX": 0, "posY": 100, "data": { "query": "SELECT * FROM {Vehicle} WHERE LastMaintenance < @Date" } },
+        { "id": "n15", "type": "ForEach", "label": "LoopVehicles", "posX": 0, "posY": 200, "data": { "list": "GetOverdue.List" } },
+        { "id": "n16", "type": "Switch", "label": "CheckType", "posX": 150, "posY": 300, "data": { "variable": "Current.Type", "cases": ["'Truck'", "'Van'"] } },
+        { "id": "n17", "type": "Assign", "label": "AssignHighPrio", "posX": 300, "posY": 400, "data": { "assignments": [{ "variable": "Priority", "value": "1" }] } },
+        { "id": "n18", "type": "Assign", "label": "AssignMedPrio", "posX": 100, "posY": 400, "data": { "assignments": [{ "variable": "Priority", "value": "2" }] } },
+        { "id": "n19", "type": "End", "label": "End", "posX": 0, "posY": 500 }
+      ],
+      "edges": [
+        { "id": "e11", "source": "n13", "target": "n14" },
+        { "id": "e12", "source": "n14", "target": "n15" },
+        { "id": "e13", "source": "n15", "target": "n16", "label": "Cycle" },
+        { "id": "e14", "source": "n16", "target": "n17", "label": "Truck" },
+        { "id": "e15", "source": "n16", "target": "n18", "label": "Van" },
+        { "id": "e16", "source": "n17", "target": "n15" },
+        { "id": "e17", "source": "n18", "target": "n15" },
+        { "id": "e18", "source": "n15", "target": "n19" }
+      ]
+    },
+    {
+      "id": "act_route_get", "moduleId": "mod_core_logistics", "name": "Route_GetAssignments", "type": "Server", "description": "API exposed to mobile", "isFunction": false, "isPublic": true,
+      "inputs": [], "outputs": [], "flowSummary": "",
+      "nodes": [{ "id": "n20", "type": "Start", "label": "Start", "posX": 0, "posY": 0 }, { "id": "n21", "type": "End", "label": "End", "posX": 0, "posY": 100 }],
+      "edges": [{ "id": "e19", "source": "n20", "target": "n21" }]
+    },
+    {
+      "id": "act_ui_init", "moduleId": "mod_ui_admin", "name": "OnInitialize", "type": "Client", "description": "Fetches data on load", "isFunction": false, "isPublic": false,
+      "inputs": [], "outputs": [], "flowSummary": "",
+      "nodes": [
+        { "id": "n22", "type": "Start", "label": "Start", "posX": 0, "posY": 0 },
+        { "id": "n23", "type": "RunServerAction", "label": "GetVehicles", "posX": 0, "posY": 100, "data": { "action_name": "Vehicle_GetList" } },
+        { "id": "n24", "type": "End", "label": "End", "posX": 0, "posY": 200 }
+      ],
+      "edges": [{ "id": "e20", "source": "n22", "target": "n23" }, { "id": "e21", "source": "n23", "target": "n24" }]
+    }
+  ],
+  "uiElements": [
+    { "id": "ui_layout_main", "moduleId": "mod_fnd_style", "name": "Layout_Main", "type": "Block", "description": "Standard app shell with sidebar", "isPublic": true },
+    { "id": "ui_icon_set", "moduleId": "mod_fnd_style", "name": "Icon_Lib", "type": "Block", "description": "SVG icons", "isPublic": true },
+    { "id": "ui_dash", "moduleId": "mod_ui_admin", "name": "Dashboard_Main", "type": "Screen", "description": "Map view of all trucks", "isPublic": false },
+    { "id": "ui_veh_det", "moduleId": "mod_ui_admin", "name": "Vehicle_Detail", "type": "Screen", "description": "Edit vehicle form", "isPublic": false },
+    { "id": "ui_myroute", "moduleId": "mod_ui_mobile", "name": "MyRoute_Screen", "type": "Screen", "description": "Driver daily list", "isPublic": false },
+    { "id": "ui_qr_scan", "moduleId": "mod_ui_mobile", "name": "ScanPackage", "type": "Screen", "description": "Camera integration", "isPublic": false }
+  ]
+}

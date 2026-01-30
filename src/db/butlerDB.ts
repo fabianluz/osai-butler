@@ -38,7 +38,6 @@ export interface FlowNode {
   label: string;
   posX: number;
   posY: number;
-  // NEW: Stores details like "Condition", "Assignments", "ActionName"
   data?: Record<string, any>;
 }
 
@@ -64,6 +63,27 @@ export interface LogicAction {
   edges: FlowEdge[];
 }
 
+export interface UIElement {
+  id: string;
+  moduleId: string;
+  name: string;
+  type: 'Screen' | 'Block';
+  description: string;
+  isPublic: boolean;
+}
+
+// --- DEPENDENCIES ---
+export interface DependencyElement {
+  id: string;
+  name: string;
+  type: 'Entity' | 'Action' | 'UI';
+}
+
+export interface ModuleDependency {
+  producerModuleId: string;
+  elements: DependencyElement[];
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -72,12 +92,16 @@ export interface Project {
   createdAt: Date;
 }
 
+// STRICT 3-LAYER ARCHITECTURE
+export type LayerType = 'End-User' | 'Core' | 'Foundation';
+
 export interface Module {
   id: string;
   projectId: string;
   name: string;
-  layer: 'Foundation' | 'Core' | 'End-User';
+  layer: LayerType;
   description: string;
+  dependencies?: ModuleDependency[];
 }
 
 // --- Database Setup ---
@@ -86,6 +110,7 @@ const db = new Dexie('OutSystemsButlerDB') as Dexie & {
   modules: EntityTable<Module, 'id'>;
   entities: EntityTable<Entity, 'id'>;
   actions: EntityTable<LogicAction, 'id'>;
+  uiElements: EntityTable<UIElement, 'id'>;
 };
 
 db.version(1).stores({
@@ -94,6 +119,6 @@ db.version(1).stores({
 });
 db.version(2).stores({ entities: 'id, moduleId, name' });
 db.version(3).stores({ actions: 'id, moduleId, name' });
-db.version(4).stores({});
+db.version(4).stores({ uiElements: 'id, moduleId, name' });
 
 export { db };

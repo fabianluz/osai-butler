@@ -1,139 +1,185 @@
 
+
 # 🤖 OutSystems AI Butler
 
-**The local-first "Digital Twin" for AI-Assisted OutSystems Development.**
+**The missing link between Service Studio, Architecture Canvas, and Large Language Models.**
 
-## 💡 The Problem
+OutSystems AI Butler acts as a **"Digital Twin"** and **Architecture Governance Tool** for your OutSystems environment (O11 or ODC). It bridges the gap between visual low-code development, rigid architectural standards, and text-based AI models (like ChatGPT, Claude, or DeepSeek).
 
-When using LLMs (ChatGPT, Claude) for OutSystems development, developers face two main issues:
+By maintaining a structured mirror of your **Data**, **Logic**, **UI**, and **Module Dependencies** locally, this tool allows you to:
 
-1. **Hallucinations:** The AI guesses entity names or attributes that don't exist in your actual project.
-2. **Context Friction:** Manually typing out your database schema and logic flow for the AI is tedious and error-prone.
-
-## 🛠 The Solution
-
-**OutSystems AI Butler** solves this by maintaining a structured, visual mirror of your O11 or ODC modules locally.
-
-It allows you to:
-
-1. **Import & Visualize:** Paste XML directly from Service Studio to see Entity Diagrams and Logic Flows.
-2. **Visually Design:** Use a drag-and-drop **Visual IDE** to design logic, SQL queries, and JavaScript nodes.
-3. **Generate Perfect Context:** Click one button to generate a hallucination-free JSON prompt for your AI.
-4. **Round-Trip Engineering:** Export your designs back to **XML** to paste them directly into Service Studio.
-
-<img width="1280" height="678" alt="image" src="https://github.com/user-attachments/assets/2e5e9de8-c7c2-43a5-a238-a5360c934059" />
-<img width="2468" height="1320" alt="image" src="https://github.com/user-attachments/assets/8ae480f7-62de-4aaa-9603-aa409dc0eec9" />
-
-
+1. **Visualize & Validate** your architecture against OutSystems best practices.
+2. **Export** token-efficient, hallucination-free context for AI.
+3. **Import** AI-generated code back into your workflow using compatible schemas.
 
 ---
 
-## 🌟 New Features
+## 🌟 Why use this?
 
-### 1. 🎨 Visual Action Editor (IDE)
+LLMs are great at writing code, but they often fail at understanding **context** and **architecture**.
 
-A fully interactive flow designer that mimics Service Studio.
-
-* **Drag & Drop:** Drag nodes (If, Assign, Loop, SQL, etc.) from the toolbox directly onto the canvas.
-* **Service Studio Styling:** Nodes look and feel like the real thing (Green Start, Red End, Blue Loops).
-* **Smart Connectors:** Orthogonal "Step" lines that automatically route between nodes.
-* **Property Inspector:** Edit SQL queries, JavaScript code, Assignments, and Conditional logic in a dedicated panel.
-
-### 2. 💾 XML Export & Round-Tripping
-
-You are no longer stuck in the app.
-
-* **Export XML:** Download your defined Entities and Actions as a `.xml` file.
-* **Service Studio Compatible:** The exported XML is formatted specifically for the OutSystems Clipboard. You can open the XML file, copy the content, and **paste it directly into Service Studio**.
-
-### 3. 🤖 Prompt Library & AI Guidance
-
-* **Suggested Prompts:** A built-in library of "System Prompts" engineered to get the best results from ChatGPT/Claude.
-* **Context Export:** The "Copy for AI" button generates a token-optimized JSON representation of your module, ensuring the AI knows exactly which Tables and Variables exist.
-
-### 4. 📦 Advanced Node Support
-
-Full support for advanced logic patterns:
-
-* **Server Side:** `SQL` (with query editor), `Execute Server Action`, `Aggregate`.
-* **Client Side:** `JavaScript` (with code editor), `Message`, `Destination`.
-* **Logic:** `ForEach` Loops, `Switch` blocks, `Exceptions`.
+* **The Problem:** You ask an AI to "create a logic flow," but it invents tables that don't exist, references modules that create circular dependencies, or suggests placing core logic in the frontend layer.
+* **The Solution:** Butler provides the AI with a **strict JSON definition** of your entire project structure. The AI "sees" your entities, your available actions, and your layer rules, ensuring its output is valid and architecturally sound.
 
 ---
 
-## 🏗 Architecture
+## 🚀 Key Features
 
-* **Frontend:** React 18 + TypeScript + Vite.
-* **Visualization:** React Flow (Diagrams) + Dagre (Auto-layout).
-* **Database:** Dexie.js (IndexedDB wrapper) - **100% Local Storage**.
-* **Parsing:** fast-xml-parser for clipboard compatibility.
+### 🏛️ Architecture & Governance (NEW)
+
+The app implements a real-time **Architecture Canvas** validator that enforces the **OutSystems 3-Layer Rules**:
+
+1. **Orchestration & Visualization:** Modules are visually grouped into **End-User**, **Core**, and **Foundation** layers.
+2. **Intelligent Dependency Graph:** Arrows are drawn automatically between modules:
+* **Gray Orthogonal Lines:** Valid references.
+* **Red Loop-Around Lines:** Invalid references (Violations).
+
+
+3. **Real-Time Validation:** The "Governance Box" warns you immediately if you break a rule:
+* ❌ **No Upward References:** A Core module cannot consume an End-User module.
+* ❌ **No Side References (Top Layers):** End-User modules cannot consume each other.
+* ❌ **No Circular Dependencies:** A module cannot indirectly depend on itself.
+
+
+
+### 📦 "Deep" Dependency Management
+
+Unlike standard diagrams that just show "Module A uses Module B," Butler tracks **Granular Dependencies**:
+
+* **Precision:** You select exactly *which* **Entities**, **Actions**, or **Screens** are consumed from a producer module.
+* **Context:** This granular data is fed to the LLM, so it knows *why* a dependency exists (e.g., "This module consumes `Order_CS` specifically for the `CreateOrder` action").
+
+### ⚡ Full-Stack Digital Twin
+
+* **Data Layer:** Define Entities, Attributes, and Relationships. Auto-generates ERDs.
+* **Logic Layer:** Visual Flowchart editor for Server Actions (Ifs, Loops, SQL, JS).
+* **UI Layer:** Define Screens and Blocks to map out your frontend.
+
+### 🤖 AI Integration
+
+* **Prompt Templates:** Built-in prompts to teach the AI how to read your specific architecture.
+* **One-Click Context:** Generates a highly optimized JSON prompt of your module (or the entire project) to paste into ChatGPT.
 
 ---
 
-## 🚀 How to Run Locally
+## 💾 Export & Import Ecosystem
 
-### 1. Clone the Repo
+This application supports two distinct types of data exchange: **Full Project Snapshots** and **Code Snippets**.
 
+### 1. Full Project Backup (`.butler` JSON)
+
+Use the **"Export Project"** button on the main dashboard to generate a `.butler` file.
+
+* **What it contains:** The entire project graph. Every Module, Entity, Action, UI Element, Description, and—crucially—the **Dependency Links** between them.
+* **Use Case:** Backups, sharing architecture with teammates, or feeding an **entire project context** to a very large context window LLM (like Claude 3 Opus or Gemini 1.5 Pro).
+* **Smart Import:** When importing a project, the system performs a **"Deep Remap"**: it regenerates UUIDs for every element but preserves the internal relationships, ensuring the dependency arrows still point to the correct modules in the new copy.
+
+### 2. Code Snippet Import (XML)
+
+Use the **"📋 Import"** button inside a module to inject specific logic or data.
+
+* **Format:** A simplified XML schema based on the clipboard format.
+* **Use Case:** Taking a specific Action or Entity generated by ChatGPT and injecting it into your current module.
+
+---
+
+## 🛠️ Installation
+
+### Prerequisites
+
+* **Node.js** (v18 or higher)
+* **npm** (included with Node.js)
+
+### Steps
+
+1. **Clone the Repository**
 ```bash
-git clone https://github.com/fabianluz/outsystems-ai-butler.git
+git clone https://github.com/fabianluz/outsystems-ai-butler
 cd outsystems-ai-butler
 
 ```
 
-### 2. Install Dependencies
 
-Ensure you have Node.js (v18+) installed.
-
+2. **Install Dependencies**
 ```bash
 npm install
+# Critical: Ensure graph and visualization libraries are installed
+npm install dagre @types/dagre @xyflow/react uuid dexie
 
 ```
 
-### 3. Run the Application
 
+3. **Start the Application**
 ```bash
 npm run dev
 
 ```
 
-Open your browser to `http://localhost:5173`.
+
+4. **Open in Browser**
+Navigate to `http://localhost:5173`.
 
 ---
 
-## 📖 User Guide
+## 📖 The "Architecture-First" Workflow
 
-### Phase 1: Import / Define
+### Phase 1: Canvas Definition
 
-* **Option A (Manual):** Create a Project -> Module -> Add Entities/Actions manually.
-* **Option B (From Service Studio):** Select your Entities/Actions in Service Studio, press `Ctrl+C`. In Butler, click **"📋 Import"** and paste the XML.
-* **Option C (From AI):** Ask ChatGPT to "Generate OutSystems XML for a generic Customer entity". Paste the result into Butler.
+1. Create your modules and assign them to **Layers** (End-User, Core, Foundation).
+2. Use the **Dependency Inspector** (Info icon on module cards) to define relationships.
+3. Check the **Governance Box** at the top of the screen. If it's green ("The architecture canvas looks correct"), proceed. If it's red, fix the arrows.
 
-### Phase 2: Refine & Design
+### Phase 2: Context Generation
 
-* Go to an Action and click **"Edit"**.
-* Drag **SQL nodes** to write complex queries.
-* Drag **JavaScript nodes** to prototype client logic.
-* Connect nodes to define the execution flow.
+1. Enter a module.
+2. Define your Entities and Actions (or import them).
+3. Click **"✨ Copy for AI"**. This copies a JSON payload containing:
+* The module's schema.
+* **Architecture Context:** Which layer it is in and what it is allowed to see.
+* **Dependency Context:** Exact signatures of Actions/Entities available from other modules.
 
-### Phase 3: Export to AI
 
-* Click **"✨ Copy for AI"**.
-* Paste into ChatGPT: *"Here is my current logic flow. Optimize the SQL query in the node named 'GetUserData'."*
 
-### Phase 4: Export to OutSystems
+### Phase 3: AI Development
 
-* Click **"💾 Export XML"**.
-* Open the downloaded file, copy the text.
-* Paste directly into the **Logic Tab** or **Data Tab** of Service Studio.
+1. Paste the context into ChatGPT.
+2. Ask: *"Create a Server Action that uses the 'CreateOrder' dependency to save data, but validate the 'CustomerStatus' first."*
+3. The AI will use the **exact names** of your dependencies because they were provided in the context.
 
 ---
 
-## 🔮 Future Roadmap
+## 📄 XML Schema for AI Interaction
 
-* [ ] **Direct Clipboard Access:** Paste directly without the modal (requires browser permissions).
-* [ ] **OML Parsing:** Upload binary `.oml` files to extract context automatically.
-* [ ] **AI Agent Integration:** Connect directly to OpenAI API to generate nodes inside the Flow Editor. (50%, currently in testing)
+When asking an LLM to generate code for Butler, you can reference this structure:
 
-## 📄 License
+### Entities
 
-Distributed under the MIT License.
+```xml
+<Entity Name="Customer" Description="Core Profile">
+    <Attributes>
+        <EntityAttribute Name="Id" Type="LongInteger" IsIdentifier="true" />
+        <EntityAttribute Name="Email" Type="Email" IsMandatory="true" />
+    </Attributes>
+</Entity>
+
+```
+
+### Server Actions
+
+```xml
+<ServerAction Name="ProcessOrder">
+    <InputParameter Name="OrderId" Type="LongInteger" />
+    <Flow>
+        <Start Name="Start" />
+        <SQL Name="GetTotal" SQL="SELECT Total FROM Orders WHERE Id = @OrderId" />
+        <If Name="IsHighValue">
+            <Condition>GetTotal.List.Current.Total > 1000</Condition>
+        </If>
+        <End Name="End" />
+        <Link Source="Start" Target="GetTotal" />
+        <Link Source="GetTotal" Target="IsHighValue" />
+        <Link Source="IsHighValue" Target="End" Label="True" />
+    </Flow>
+</ServerAction>
+
+```

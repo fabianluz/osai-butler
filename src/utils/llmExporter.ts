@@ -1,11 +1,31 @@
-import { type Entity, type Module, type LogicAction } from '../db/butlerDB';
+import { type Entity, type Module, type LogicAction, type UIElement } from '../db/butlerDB';
 
-export function generateModuleContext(module: Module, entities: Entity[], actions: LogicAction[] = []) {
+export function generateModuleContext(
+    module: Module,
+    entities: Entity[],
+    actions: LogicAction[] = [],
+    uiElements: UIElement[] = [], // <--- NEW PARAM
+    projectModules: Module[] = []
+) {
+
+    // Resolve Dependencies into Human Readable Format
+    const dependenciesReadable = (module.dependencies || []).map(dep => {
+        const producer = projectModules.find(m => m.id === dep.producerModuleId);
+        return {
+            producer_module: producer ? producer.name : "Unknown",
+            producer_layer: producer ? producer.layer : "Unknown",
+            consumed_elements: dep.elements.map(e => `${e.type}: ${e.name}`)
+        };
+    });
 
     const context = {
         context_type: "OutSystems_Module_Definition",
         module_name: module.name,
+        module_description: module.description || "No description provided.",
         layer: module.layer,
+
+        // 0. ARCHITECTURE & DEPENDENCIES
+        architecture_dependencies: dependenciesReadable,
 
         // 1. DATA LAYER
         database: entities.map(ent => ({
@@ -22,49 +42,18 @@ export function generateModuleContext(module: Module, entities: Entity[], action
             name: act.name,
             type: act.type,
             description: act.description,
+            is_public: act.isPublic,
             inputs: act.inputs.map(v => `${v.name} (${v.dataType})`),
             outputs: act.outputs.map(v => `${v.name} (${v.dataType})`),
+            flow_summary: act.flowSummary
+        })),
 
-            // 3. DETAILED LOGIC FLOW
-            // The LLM can now read the logic line-by-line
-            flow_logic: {
-                nodes: act.nodes?.map(n => {
-                    // Base Node
-                    let details: any = {
-                        step: n.label,
-                        type: n.type
-                    };
-
-                    // ENRICHMENT: Add specific logic details
-                    if (n.type === 'If' && n.data?.condition) {
-                        details.condition = n.data.condition; // "Amount > 100"
-                    }
-                    if (n.type === 'Assign' && n.data?.assignments) {
-                        details.updates = n.data.assignments.map((a: any) => `${a.variable} = ${a.value}`);
-                    }
-                    if ((n.type === 'ExecuteServerAction' || n.type === 'RunServerAction') && n.data?.action_name) {
-                        details.calls = n.data.action_name;
-                    }
-                    if (n.type === 'Switch' && n.data?.cases) {
-                        details.cases = n.data.cases;
-                    }
-                    if (n.type === 'Comment') {
-                        details.note = n.data?.text;
-                    }
-                    if (n.type === 'RaiseException') {
-                        details.error = `${n.data?.exception}: ${n.data?.message}`;
-                    }
-
-                    return details;
-                }) || [],
-
-                // Wiring
-                connections: act.edges?.map(e => ({
-                    from: e.source,
-                    to: e.target,
-                    trigger: e.label ? e.label : "next"
-                })) || []
-            }
+        // 3. UI LAYER (NEW)
+        ui_screens_blocks: uiElements.map(ui => ({
+            name: ui.name,
+            type: ui.type,
+            description: ui.description,
+            is_public: ui.isPublic
         }))
     };
 
