@@ -1,4 +1,8 @@
-# 🤖 OutSystems AI Butler
+
+# 🤖 OSAI Butler
+
+[![Download Mac](https://img.shields.io/badge/Download-macOS_Atomic-white?logo=apple&style=for-the-badge)](https://github.com/fabianluz/osai-butler/releases/latest)
+[![Download Win](https://img.shields.io/badge/Download-Windows-blue?logo=windows&style=for-the-badge)](https://github.com/fabianluz/osai-butler/releases/latest)
 
 **The missing link between Service Studio, Architecture Canvas, and Large Language Models.**
 

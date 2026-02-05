@@ -7,22 +7,33 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+.pnpm-store
+
+# Build Output (Vite)
 dist
 dist-ssr
+
+# Electron Builder Output (CRITICAL: Do not upload these!)
+release/
+dist_electron/
+
+# Local Environment & Secrets
+.env
+.env.*.local
 *.local
 
-# Editor directories and files
+# OS Generated Files
+.DS_Store
+Thumbs.db
+
+# Editor directories
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-node_modules/
-dist/
-.env
-.DS_Store
