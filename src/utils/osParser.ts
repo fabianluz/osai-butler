@@ -148,13 +148,13 @@ export const parseClipboardData = (xmlString: string, moduleId: string): { entit
                             nodeData.message = item.ExceptionMessage || "";
                         }
 
-                        // 7. SQL (New Support)
+                        // 7. SQL 
                         if (tag === 'SQL') {
                             // Service Studio often stores the SQL in a Property named 'SQL' or 'CommandText'
                             nodeData.query = item.SQL || item.CommandText || item.Name || "SELECT ...";
                         }
 
-                        // 8. JavaScript (New Support)
+                        // 8. JavaScript 
                         if (tag === 'JavaScript') {
                             nodeData.code = item.Script || item.Code || "// JS Code";
                         }

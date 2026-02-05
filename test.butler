@@ -2,257 +2,430 @@
   "version": 2,
   "type": "butler_project_backup",
   "project": {
-    "id": "proj_omnifleet_001",
-    "name": "OmniFleet Enterprise",
+    "id": "proj-smart-pantry-odc",
+    "name": "SmartPantry ODC",
     "platform": "ODC",
-    "description": "A comprehensive logistics and fleet management solution managing vehicles, drivers, routing, and mobile operations.",
-    "createdAt": "2025-01-30T10:00:00.000Z"
+    "description": "Cloud-native household inventory management with Vision AI, Native Scanning, and Predictive Replenishment.",
+    "createdAt": "2023-10-27T10:00:00.000Z"
   },
   "modules": [
     {
-      "id": "mod_fnd_audit",
-      "projectId": "proj_omnifleet_001",
-      "name": "Audit_Lib",
-      "layer": "Foundation",
-      "description": "Centralized security logging and compliance auditing for all system events.",
-      "dependencies": []
-    },
-    {
-      "id": "mod_fnd_geo",
-      "projectId": "proj_omnifleet_001",
-      "name": "GeoLocation_IS",
-      "layer": "Foundation",
-      "description": "Integration Service wrapping Google Maps API and GPS calculation logic.",
+      "id": "mod-smart-pantry-app",
+      "projectId": "proj-smart-pantry-odc",
+      "name": "SmartPantry",
+      "layer": "Core",
+      "odcRole": "App",
+      "description": "Main ODC App. Contains Server Data, Local Storage (for Offline), Logic, and UI.",
       "dependencies": [
         {
-          "producerModuleId": "mod_fnd_audit",
+          "producerModuleId": "mod-vision-sync-lib",
           "elements": [
-            { "id": "act_audit_write", "name": "Log_Write", "type": "Action" },
-            { "id": "ent_audit_log", "name": "SystemLog", "type": "Entity" }
+            { "id": "act-analyze-receipt", "name": "AnalyzeReceiptImage", "type": "Action", "subType": "ServerAction" }
+          ]
+        },
+        {
+          "producerModuleId": "mod-native-scanner-lib",
+          "elements": [
+            { "id": "act-scan-barcode", "name": "ScanBarcode", "type": "Action", "subType": "ClientAction" }
           ]
         }
       ]
     },
     {
-      "id": "mod_fnd_style",
-      "projectId": "proj_omnifleet_001",
-      "name": "UI_StyleGuide",
+      "id": "mod-vision-sync-lib",
+      "projectId": "proj-smart-pantry-odc",
+      "name": "VisionSync",
       "layer": "Foundation",
-      "description": "Contains common UI Blocks, Layouts, and Theme definitions.",
+      "odcRole": "Library",
+      "description": "High-code C# Library wrapping Azure Vision / Tesseract for receipt OCR.",
       "dependencies": []
     },
     {
-      "id": "mod_core_fleet",
-      "projectId": "proj_omnifleet_001",
-      "name": "Fleet_CS",
-      "layer": "Core",
-      "description": "Core Service managing Vehicle lifecycle, maintenance schedules, and inventory.",
-      "dependencies": [
-        {
-          "producerModuleId": "mod_fnd_audit",
-          "elements": [{ "id": "act_audit_write", "name": "Log_Write", "type": "Action" }]
-        }
-      ]
-    },
-    {
-      "id": "mod_core_hr",
-      "projectId": "proj_omnifleet_001",
-      "name": "Personnel_CS",
-      "layer": "Core",
-      "description": "Human Resources logic for Drivers, Shifts, and Certifications.",
+      "id": "mod-native-scanner-lib",
+      "projectId": "proj-smart-pantry-odc",
+      "name": "NativeScanner",
+      "layer": "Foundation",
+      "odcRole": "Library",
+      "description": "Mobile Plugin wrapper for hardware barcode scanning.",
       "dependencies": []
-    },
-    {
-      "id": "mod_core_logistics",
-      "projectId": "proj_omnifleet_001",
-      "name": "Logistics_Core",
-      "layer": "Core",
-      "description": "Complex routing algorithms and Shipment tracking logic.",
-      "dependencies": [
-        {
-          "producerModuleId": "mod_fnd_geo",
-          "elements": [{ "id": "act_geo_calc", "name": "Geo_CalcDistance", "type": "Action" }]
-        },
-        {
-          "producerModuleId": "mod_core_fleet",
-          "elements": [{ "id": "ent_veh_01", "name": "Vehicle", "type": "Entity" }]
-        }
-      ]
-    },
-    {
-      "id": "mod_ui_admin",
-      "projectId": "proj_omnifleet_001",
-      "name": "FleetAdmin_Web",
-      "layer": "End-User",
-      "description": "Back-office web portal for fleet managers to dispatch and monitor.",
-      "dependencies": [
-        {
-          "producerModuleId": "mod_core_fleet",
-          "elements": [
-            { "id": "ent_veh_01", "name": "Vehicle", "type": "Entity" },
-            { "id": "act_veh_create", "name": "Vehicle_CreateOrUpdate", "type": "Action" }
-          ]
-        },
-        {
-          "producerModuleId": "mod_fnd_style",
-          "elements": [{ "id": "ui_layout_main", "name": "Layout_Main", "type": "UI" }]
-        }
-      ]
-    },
-    {
-      "id": "mod_ui_mobile",
-      "projectId": "proj_omnifleet_001",
-      "name": "Driver_App",
-      "layer": "End-User",
-      "description": "Mobile application for drivers to view routes and scan packages.",
-      "dependencies": [
-        {
-          "producerModuleId": "mod_core_logistics",
-          "elements": [{ "id": "act_route_get", "name": "Route_GetAssignments", "type": "Action" }]
-        }
-      ]
     }
   ],
   "entities": [
     {
-      "id": "ent_audit_log", "moduleId": "mod_fnd_audit", "name": "SystemLog", "isPublic": true, "isStatic": false, "description": "High volume audit table",
+      "id": "ent-product",
+      "moduleId": "mod-smart-pantry-app",
+      "name": "Product",
+      "description": "Master product definition.",
+      "isStatic": false,
+      "isPublic": false,
       "attributes": [
-        { "id": "att_1", "name": "Id", "dataType": "LongInteger", "isIdentifier": true, "isMandatory": true },
-        { "id": "att_2", "name": "Source", "dataType": "Text", "length": 100, "isMandatory": true, "isIdentifier": false },
-        { "id": "att_3", "name": "Payload", "dataType": "Text", "length": 2000, "isMandatory": false, "isIdentifier": false },
-        { "id": "att_4", "name": "CreatedAt", "dataType": "DateTime", "isMandatory": true, "isIdentifier": false }
+        { "id": "attr-prod-id", "name": "Id", "dataType": "LongInteger", "isMandatory": true, "isIdentifier": true },
+        { "id": "attr-prod-gtin", "name": "GTIN", "dataType": "Text", "length": 50, "isMandatory": true, "isIdentifier": false },
+        { "id": "attr-prod-name", "name": "Name", "dataType": "Text", "length": 100, "isMandatory": true, "isIdentifier": false },
+        { "id": "attr-prod-unit", "name": "UnitType", "dataType": "Text", "length": 20, "isMandatory": true, "isIdentifier": false },
+        { "id": "attr-prod-cal", "name": "CaloriesPerUnit", "dataType": "Decimal", "isMandatory": false, "isIdentifier": false },
+        { "id": "attr-prod-avg", "name": "AvgDailyConsumption", "dataType": "Decimal", "isMandatory": false, "isIdentifier": false }
       ]
     },
     {
-      "id": "ent_geo_cache", "moduleId": "mod_fnd_geo", "name": "GeoCache", "isPublic": false, "isStatic": false, "description": "API Cache",
+      "id": "ent-local-product",
+      "moduleId": "mod-smart-pantry-app",
+      "name": "LocalProduct",
+      "description": "Client-side mirror of Product for Offline access.",
+      "isStatic": false,
+      "isPublic": false,
       "attributes": [
-        { "id": "att_5", "name": "AddressHash", "dataType": "Text", "length": 250, "isIdentifier": true, "isMandatory": true },
-        { "id": "att_6", "name": "Lat", "dataType": "Decimal", "isMandatory": true, "isIdentifier": false },
-        { "id": "att_7", "name": "Long", "dataType": "Decimal", "isMandatory": true, "isIdentifier": false }
+        { "id": "attr-lp-id", "name": "Id", "dataType": "LongInteger", "isMandatory": true, "isIdentifier": true },
+        { "id": "attr-lp-name", "name": "Name", "dataType": "Text", "length": 100, "isMandatory": true, "isIdentifier": false },
+        { "id": "attr-lp-sync", "name": "IsSynced", "dataType": "Boolean", "isMandatory": true, "isIdentifier": false }
       ]
     },
     {
-      "id": "ent_veh_01", "moduleId": "mod_core_fleet", "name": "Vehicle", "isPublic": true, "isStatic": false, "description": "Master vehicle data",
+      "id": "ent-inventory",
+      "moduleId": "mod-smart-pantry-app",
+      "name": "InventoryItem",
+      "description": "Physical instances of products.",
+      "isStatic": false,
+      "isPublic": false,
       "attributes": [
-        { "id": "att_8", "name": "Id", "dataType": "LongInteger", "isIdentifier": true, "isMandatory": true },
-        { "id": "att_9", "name": "VIN", "dataType": "Text", "length": 50, "isMandatory": true, "isIdentifier": false },
-        { "id": "att_10", "name": "LicensePlate", "dataType": "Text", "length": 20, "isMandatory": true, "isIdentifier": false },
-        { "id": "att_11", "name": "StatusId", "dataType": "Integer", "isMandatory": true, "isIdentifier": false },
-        { "id": "att_12", "name": "LastMaintenance", "dataType": "Date", "isMandatory": false, "isIdentifier": false }
+        { "id": "attr-inv-id", "name": "Id", "dataType": "LongInteger", "isMandatory": true, "isIdentifier": true },
+        { "id": "attr-inv-prod", "name": "ProductId", "dataType": "LongInteger", "isMandatory": true, "isIdentifier": false },
+        { "id": "attr-inv-qty", "name": "Quantity", "dataType": "Decimal", "isMandatory": true, "isIdentifier": false },
+        { "id": "attr-inv-loc", "name": "Location", "dataType": "Text", "length": 50, "isMandatory": true, "isIdentifier": false },
+        { "id": "attr-inv-exp", "name": "ExpirationDate", "dataType": "Date", "isMandatory": false, "isIdentifier": false }
       ]
     },
     {
-      "id": "ent_veh_02", "moduleId": "mod_core_fleet", "name": "MaintenanceHistory", "isPublic": false, "isStatic": false, "description": "",
+      "id": "ent-supermarket",
+      "moduleId": "mod-smart-pantry-app",
+      "name": "Supermarket",
+      "description": "Stores for price comparison.",
+      "isStatic": false,
+      "isPublic": false,
       "attributes": [
-        { "id": "att_13", "name": "Id", "dataType": "LongInteger", "isIdentifier": true, "isMandatory": true },
-        { "id": "att_14", "name": "VehicleId", "dataType": "LongInteger", "isMandatory": true, "isIdentifier": false },
-        { "id": "att_15", "name": "Cost", "dataType": "Currency", "isMandatory": true, "isIdentifier": false }
+        { "id": "attr-sup-id", "name": "Id", "dataType": "LongInteger", "isMandatory": true, "isIdentifier": true },
+        { "id": "attr-sup-name", "name": "Name", "dataType": "Text", "length": 100, "isMandatory": true, "isIdentifier": false }
       ]
     },
     {
-      "id": "ent_hr_01", "moduleId": "mod_core_hr", "name": "DriverProfile", "isPublic": true, "isStatic": false, "description": "",
+      "id": "ent-price-history",
+      "moduleId": "mod-smart-pantry-app",
+      "name": "PriceHistory",
+      "description": "Historical pricing for Index calculation.",
+      "isStatic": false,
+      "isPublic": false,
       "attributes": [
-        { "id": "att_16", "name": "Id", "dataType": "LongInteger", "isIdentifier": true, "isMandatory": true },
-        { "id": "att_17", "name": "UserId", "dataType": "LongInteger", "isMandatory": true, "isIdentifier": false },
-        { "id": "att_18", "name": "LicenseExpiry", "dataType": "Date", "isMandatory": true, "isIdentifier": false }
+        { "id": "attr-ph-id", "name": "Id", "dataType": "LongInteger", "isMandatory": true, "isIdentifier": true },
+        { "id": "attr-ph-prod", "name": "ProductId", "dataType": "LongInteger", "isMandatory": true, "isIdentifier": false },
+        { "id": "attr-ph-sup", "name": "SupermarketId", "dataType": "LongInteger", "isMandatory": true, "isIdentifier": false },
+        { "id": "attr-ph-price", "name": "Price", "dataType": "Decimal", "isMandatory": true, "isIdentifier": false },
+        { "id": "attr-ph-date", "name": "RecordedAt", "dataType": "DateTime", "isMandatory": true, "isIdentifier": false }
       ]
     },
     {
-      "id": "ent_log_ship", "moduleId": "mod_core_logistics", "name": "Shipment", "isPublic": true, "isStatic": false, "description": "",
+      "id": "ent-consumption",
+      "moduleId": "mod-smart-pantry-app",
+      "name": "ConsumptionLog",
+      "description": "Log for predictive AI.",
+      "isStatic": false,
+      "isPublic": false,
       "attributes": [
-        { "id": "att_19", "name": "Id", "dataType": "LongInteger", "isIdentifier": true, "isMandatory": true },
-        { "id": "att_20", "name": "TrackingCode", "dataType": "Text", "length": 50, "isMandatory": true, "isIdentifier": false },
-        { "id": "att_21", "name": "Weight", "dataType": "Decimal", "isMandatory": false, "isIdentifier": false }
+        { "id": "attr-log-id", "name": "Id", "dataType": "LongInteger", "isMandatory": true, "isIdentifier": true },
+        { "id": "attr-log-prod", "name": "ProductId", "dataType": "LongInteger", "isMandatory": true, "isIdentifier": false },
+        { "id": "attr-log-qty", "name": "QtyConsumed", "dataType": "Decimal", "isMandatory": true, "isIdentifier": false },
+        { "id": "attr-log-date", "name": "LogDate", "dataType": "DateTime", "isMandatory": true, "isIdentifier": false }
+      ]
+    },
+    {
+      "id": "ent-recipe",
+      "moduleId": "mod-smart-pantry-app",
+      "name": "Recipe",
+      "description": "Cooking instructions.",
+      "isStatic": false,
+      "isPublic": false,
+      "attributes": [
+        { "id": "attr-rec-id", "name": "Id", "dataType": "LongInteger", "isMandatory": true, "isIdentifier": true },
+        { "id": "attr-rec-title", "name": "Title", "dataType": "Text", "length": 200, "isMandatory": true, "isIdentifier": false },
+        { "id": "attr-rec-cal", "name": "TotalCalories", "dataType": "Decimal", "isMandatory": false, "isIdentifier": false }
+      ]
+    },
+    {
+      "id": "ent-recipe-item",
+      "moduleId": "mod-smart-pantry-app",
+      "name": "RecipeItem",
+      "description": "Link between Recipe and Product.",
+      "isStatic": false,
+      "isPublic": false,
+      "attributes": [
+        { "id": "attr-ri-id", "name": "Id", "dataType": "LongInteger", "isMandatory": true, "isIdentifier": true },
+        { "id": "attr-ri-rec", "name": "RecipeId", "dataType": "LongInteger", "isMandatory": true, "isIdentifier": false },
+        { "id": "attr-ri-prod", "name": "ProductId", "dataType": "LongInteger", "isMandatory": true, "isIdentifier": false },
+        { "id": "attr-ri-qty", "name": "RequiredQty", "dataType": "Decimal", "isMandatory": true, "isIdentifier": false }
       ]
     }
   ],
   "actions": [
     {
-      "id": "act_audit_write", "moduleId": "mod_fnd_audit", "name": "Log_Write", "type": "Server", "description": "Writes generic log", "isFunction": false, "isPublic": true,
-      "inputs": [{ "id": "v1", "name": "Msg", "dataType": "Text", "isList": false, "isMandatory": true }], "outputs": [], "flowSummary": "",
+      "id": "act-analyze-receipt",
+      "moduleId": "mod-vision-sync-lib",
+      "name": "AnalyzeReceiptImage",
+      "type": "Server",
+      "description": "Parses an image via Azure Vision OCR.",
+      "isFunction": false,
+      "isPublic": true,
+      "inputs": [{ "id": "in-img", "name": "ImageBinary", "dataType": "Binary", "isList": false, "isMandatory": true }],
+      "outputs": [{ "id": "out-json", "name": "ParsedJSON", "dataType": "Text", "isList": false, "isMandatory": false }],
+      "flowSummary": "Calls C# Extension.",
+      "nodes": [],
+      "edges": []
+    },
+    {
+      "id": "act-scan-barcode",
+      "moduleId": "mod-native-scanner-lib",
+      "name": "ScanBarcode",
+      "type": "Client",
+      "description": "Opens camera for scanning.",
+      "isFunction": false,
+      "isPublic": true,
+      "inputs": [],
+      "outputs": [{ "id": "out-code", "name": "ScannedCode", "dataType": "Text", "isList": false, "isMandatory": false }],
+      "flowSummary": "Calls Cordova Plugin.",
+      "nodes": [],
+      "edges": []
+    },
+    {
+      "id": "act-forecast",
+      "moduleId": "mod-smart-pantry-app",
+      "name": "Forecast_RunAnalysis",
+      "type": "Server",
+      "description": "Calculates daily usage and auto-fills shopping list.",
+      "isFunction": false,
+      "isPublic": false,
+      "inputs": [],
+      "outputs": [],
+      "flowSummary": "Aggregates logs, updates products, adds to shopping list.",
       "nodes": [
         { "id": "n1", "type": "Start", "label": "Start", "posX": 0, "posY": 0 },
-        { "id": "n2", "type": "EntityAction", "label": "CreateLog", "posX": 0, "posY": 100 },
-        { "id": "n3", "type": "End", "label": "End", "posX": 0, "posY": 200 }
-      ],
-      "edges": [{ "id": "e1", "source": "n1", "target": "n2" }, { "id": "e2", "source": "n2", "target": "n3" }]
-    },
-    {
-      "id": "act_geo_calc", "moduleId": "mod_fnd_geo", "name": "Geo_CalcDistance", "type": "Service", "description": "Calculates distance between two points", "isFunction": true, "isPublic": true,
-      "inputs": [], "outputs": [], "flowSummary": "",
-      "nodes": [
-        { "id": "n4", "type": "Start", "label": "Start", "posX": 0, "posY": 0 },
-        { "id": "n5", "type": "JavaScript", "label": "HaversineFormula", "posX": 0, "posY": 100, "data": { "code": "// JS Math logic..." } },
-        { "id": "n6", "type": "End", "label": "End", "posX": 0, "posY": 200 }
-      ],
-      "edges": [{ "id": "e3", "source": "n4", "target": "n5" }, { "id": "e4", "source": "n5", "target": "n6" }]
-    },
-    {
-      "id": "act_veh_create", "moduleId": "mod_core_fleet", "name": "Vehicle_CreateOrUpdate", "type": "Server", "description": "CRUD Wrapper", "isFunction": false, "isPublic": true,
-      "inputs": [{ "id": "v2", "name": "Veh", "dataType": "Record", "isList": false, "isMandatory": true }], "outputs": [], "flowSummary": "",
-      "nodes": [
-        { "id": "n7", "type": "Start", "label": "Start", "posX": 0, "posY": 0 },
-        { "id": "n8", "type": "If", "label": "IsValid", "posX": 0, "posY": 100, "data": { "condition": "Veh.VIN <> \"\"" } },
-        { "id": "n9", "type": "EntityAction", "label": "Create", "posX": -100, "posY": 200 },
-        { "id": "n10", "type": "RaiseException", "label": "Error", "posX": 100, "posY": 200, "data": { "exception": "User", "message": "\"Invalid VIN\"" } },
-        { "id": "n11", "type": "ExecuteServerAction", "label": "Log", "posX": 100, "posY": 300, "data": { "action_name": "Log_Write" } },
-        { "id": "n12", "type": "End", "label": "End", "posX": 0, "posY": 400 }
+        { "id": "n2", "type": "Aggregate", "label": "GetConsumptionLogs", "posX": 0, "posY": 100 },
+        { "id": "n3", "type": "Loop", "label": "ForEach Product", "posX": 0, "posY": 200 },
+        { "id": "n4", "type": "Assign", "label": "Calc Avg Usage", "posX": 100, "posY": 300 },
+        { "id": "n5", "type": "Update", "label": "UpdateProduct", "posX": 100, "posY": 400 },
+        { "id": "n6", "type": "Aggregate", "label": "GetInventory", "posX": 100, "posY": 500 },
+        { "id": "n7", "type": "If", "label": "Qty < 3 Days?", "posX": 100, "posY": 600 },
+        { "id": "n8", "type": "Action", "label": "AddToShoppingList", "posX": 200, "posY": 700 },
+        { "id": "n9", "type": "End", "label": "End", "posX": 0, "posY": 800 }
       ],
       "edges": [
-        { "id": "e5", "source": "n7", "target": "n8" },
-        { "id": "e6", "source": "n8", "target": "n9", "label": "True" },
-        { "id": "e7", "source": "n8", "target": "n10", "label": "False" },
-        { "id": "e8", "source": "n10", "target": "n11" },
-        { "id": "e9", "source": "n9", "target": "n12" },
-        { "id": "e10", "source": "n11", "target": "n12" }
+        { "id": "e1", "source": "n1", "target": "n2" },
+        { "id": "e2", "source": "n2", "target": "n3" },
+        { "id": "e3", "source": "n3", "target": "n4", "label": "Cycle" },
+        { "id": "e4", "source": "n4", "target": "n5" },
+        { "id": "e5", "source": "n5", "target": "n6" },
+        { "id": "e6", "source": "n6", "target": "n7" },
+        { "id": "e7", "source": "n7", "target": "n8", "label": "True" },
+        { "id": "e8", "source": "n7", "target": "n3", "label": "False" },
+        { "id": "e9", "source": "n8", "target": "n3" },
+        { "id": "e10", "source": "n3", "target": "n9", "label": "End" }
       ]
     },
     {
-      "id": "act_maint_check", "moduleId": "mod_core_fleet", "name": "Maintenance_RunDailyCheck", "type": "Server", "description": "SQL-based heavy logic", "isFunction": false, "isPublic": false,
-      "inputs": [], "outputs": [], "flowSummary": "",
+      "id": "act-adjust-stock",
+      "moduleId": "mod-smart-pantry-app",
+      "name": "Inventory_AdjustStock",
+      "type": "Server",
+      "description": "Updates stock and logs consumption.",
+      "isFunction": false,
+      "isPublic": true,
+      "inputs": [
+        { "id": "in-p", "name": "ProductId", "dataType": "LongInteger", "isList": false, "isMandatory": true },
+        { "id": "in-d", "name": "Delta", "dataType": "Decimal", "isList": false, "isMandatory": true }
+      ],
+      "outputs": [],
+      "flowSummary": "Transactional update logic.",
       "nodes": [
-        { "id": "n13", "type": "Start", "label": "Start", "posX": 0, "posY": 0 },
-        { "id": "n14", "type": "SQL", "label": "GetOverdue", "posX": 0, "posY": 100, "data": { "query": "SELECT * FROM {Vehicle} WHERE LastMaintenance < @Date" } },
-        { "id": "n15", "type": "ForEach", "label": "LoopVehicles", "posX": 0, "posY": 200, "data": { "list": "GetOverdue.List" } },
-        { "id": "n16", "type": "Switch", "label": "CheckType", "posX": 150, "posY": 300, "data": { "variable": "Current.Type", "cases": ["'Truck'", "'Van'"] } },
-        { "id": "n17", "type": "Assign", "label": "AssignHighPrio", "posX": 300, "posY": 400, "data": { "assignments": [{ "variable": "Priority", "value": "1" }] } },
-        { "id": "n18", "type": "Assign", "label": "AssignMedPrio", "posX": 100, "posY": 400, "data": { "assignments": [{ "variable": "Priority", "value": "2" }] } },
-        { "id": "n19", "type": "End", "label": "End", "posX": 0, "posY": 500 }
+        { "id": "ns1", "type": "Start", "label": "Start", "posX": 0, "posY": 0 },
+        { "id": "ns2", "type": "Aggregate", "label": "GetInventoryItem", "posX": 0, "posY": 100 },
+        { "id": "ns3", "type": "If", "label": "Exists?", "posX": 0, "posY": 200 },
+        { "id": "ns4", "type": "Create", "label": "CreateItem", "posX": -100, "posY": 300 },
+        { "id": "ns5", "type": "Assign", "label": "UpdateQty", "posX": 100, "posY": 300 },
+        { "id": "ns6", "type": "If", "label": "Delta < 0?", "posX": 0, "posY": 400 },
+        { "id": "ns7", "type": "Create", "label": "LogConsumption", "posX": 100, "posY": 500 },
+        { "id": "ns8", "type": "End", "label": "End", "posX": 0, "posY": 600 }
       ],
       "edges": [
-        { "id": "e11", "source": "n13", "target": "n14" },
-        { "id": "e12", "source": "n14", "target": "n15" },
-        { "id": "e13", "source": "n15", "target": "n16", "label": "Cycle" },
-        { "id": "e14", "source": "n16", "target": "n17", "label": "Truck" },
-        { "id": "e15", "source": "n16", "target": "n18", "label": "Van" },
-        { "id": "e16", "source": "n17", "target": "n15" },
-        { "id": "e17", "source": "n18", "target": "n15" },
-        { "id": "e18", "source": "n15", "target": "n19" }
+        { "id": "es1", "source": "ns1", "target": "ns2" },
+        { "id": "es2", "source": "ns2", "target": "ns3" },
+        { "id": "es3", "source": "ns3", "target": "ns4", "label": "False" },
+        { "id": "es4", "source": "ns3", "target": "ns5", "label": "True" },
+        { "id": "es5", "source": "ns4", "target": "ns6" },
+        { "id": "es6", "source": "ns5", "target": "ns6" },
+        { "id": "es7", "source": "ns6", "target": "ns7", "label": "True" },
+        { "id": "es8", "source": "ns6", "target": "ns8", "label": "False" },
+        { "id": "es9", "source": "ns7", "target": "ns8" }
       ]
     },
     {
-      "id": "act_route_get", "moduleId": "mod_core_logistics", "name": "Route_GetAssignments", "type": "Server", "description": "API exposed to mobile", "isFunction": false, "isPublic": true,
-      "inputs": [], "outputs": [], "flowSummary": "",
-      "nodes": [{ "id": "n20", "type": "Start", "label": "Start", "posX": 0, "posY": 0 }, { "id": "n21", "type": "End", "label": "End", "posX": 0, "posY": 100 }],
-      "edges": [{ "id": "e19", "source": "n20", "target": "n21" }]
+      "id": "act-offline-sync",
+      "moduleId": "mod-smart-pantry-app",
+      "name": "OfflineDataSync",
+      "type": "Client",
+      "description": "Syncs LocalProduct with Server Product.",
+      "isFunction": false,
+      "isPublic": false,
+      "inputs": [],
+      "outputs": [],
+      "flowSummary": "Framework hook for offline sync.",
+      "nodes": [
+        { "id": "os1", "type": "Start", "label": "Start", "posX": 0, "posY": 0 },
+        { "id": "os2", "type": "ExecuteServerAction", "label": "ServerDataSync", "posX": 0, "posY": 100 },
+        { "id": "os3", "type": "Action", "label": "UpdateLocalStorage", "posX": 0, "posY": 200 },
+        { "id": "os4", "type": "End", "label": "End", "posX": 0, "posY": 300 }
+      ],
+      "edges": [
+        { "id": "eos1", "source": "os1", "target": "os2" },
+        { "id": "eos2", "source": "os2", "target": "os3" },
+        { "id": "eos3", "source": "os3", "target": "os4" }
+      ]
     },
     {
-      "id": "act_ui_init", "moduleId": "mod_ui_admin", "name": "OnInitialize", "type": "Client", "description": "Fetches data on load", "isFunction": false, "isPublic": false,
-      "inputs": [], "outputs": [], "flowSummary": "",
+      "id": "act-recipe-cookable",
+      "moduleId": "mod-smart-pantry-app",
+      "name": "Recipe_FindCookable",
+      "type": "Server",
+      "description": "Returns recipes where user has all ingredients.",
+      "isFunction": true,
+      "isPublic": false,
+      "inputs": [],
+      "outputs": [{ "id": "out-rl", "name": "CookableRecipes", "dataType": "List", "isList": true, "isMandatory": false }],
+      "flowSummary": "Knapsack algorithm simulation.",
       "nodes": [
-        { "id": "n22", "type": "Start", "label": "Start", "posX": 0, "posY": 0 },
-        { "id": "n23", "type": "RunServerAction", "label": "GetVehicles", "posX": 0, "posY": 100, "data": { "action_name": "Vehicle_GetList" } },
-        { "id": "n24", "type": "End", "label": "End", "posX": 0, "posY": 200 }
+        { "id": "rc1", "type": "Start", "label": "Start", "posX": 0, "posY": 0 },
+        { "id": "rc2", "type": "Aggregate", "label": "GetAllRecipes", "posX": 0, "posY": 100 },
+        { "id": "rc3", "type": "Loop", "label": "ForEach Recipe", "posX": 0, "posY": 200 },
+        { "id": "rc4", "type": "Aggregate", "label": "GetIngredients", "posX": 150, "posY": 200 },
+        { "id": "rc5", "type": "If", "label": "Has Inventory?", "posX": 300, "posY": 200 },
+        { "id": "rc6", "type": "Assign", "label": "Add to List", "posX": 300, "posY": 300 },
+        { "id": "rc7", "type": "End", "label": "End", "posX": 0, "posY": 400 }
       ],
-      "edges": [{ "id": "e20", "source": "n22", "target": "n23" }, { "id": "e21", "source": "n23", "target": "n24" }]
+      "edges": [
+        { "id": "erc1", "source": "rc1", "target": "rc2" },
+        { "id": "erc2", "source": "rc2", "target": "rc3" },
+        { "id": "erc3", "source": "rc3", "target": "rc4", "label": "Cycle" },
+        { "id": "erc4", "source": "rc4", "target": "rc5" },
+        { "id": "erc5", "source": "rc5", "target": "rc6", "label": "True" },
+        { "id": "erc6", "source": "rc6", "target": "rc3" },
+        { "id": "erc7", "source": "rc5", "target": "rc3", "label": "False" },
+        { "id": "erc8", "source": "rc3", "target": "rc7", "label": "End" }
+      ]
+    },
+    {
+      "id": "act-export-json",
+      "moduleId": "mod-smart-pantry-app",
+      "name": "Data_ExportJSON",
+      "type": "Server",
+      "description": "Exports user data for portability.",
+      "isFunction": false,
+      "isPublic": true,
+      "inputs": [],
+      "outputs": [{ "id": "out-file", "name": "FileBinary", "dataType": "Binary", "isList": false, "isMandatory": true }],
+      "flowSummary": "Serializes Inventory entities to JSON.",
+      "nodes": [
+        { "id": "ex1", "type": "Start", "label": "Start", "posX": 0, "posY": 0 },
+        { "id": "ex2", "type": "Aggregate", "label": "GetAllData", "posX": 0, "posY": 100 },
+        { "id": "ex3", "type": "Action", "label": "JSON Serialize", "posX": 0, "posY": 200 },
+        { "id": "ex4", "type": "End", "label": "End", "posX": 0, "posY": 300 }
+      ],
+      "edges": [
+        { "id": "eex1", "source": "ex1", "target": "ex2" },
+        { "id": "eex2", "source": "ex2", "target": "ex3" },
+        { "id": "eex3", "source": "ex3", "target": "ex4" }
+      ]
     }
   ],
   "uiElements": [
-    { "id": "ui_layout_main", "moduleId": "mod_fnd_style", "name": "Layout_Main", "type": "Block", "description": "Standard app shell with sidebar", "isPublic": true },
-    { "id": "ui_icon_set", "moduleId": "mod_fnd_style", "name": "Icon_Lib", "type": "Block", "description": "SVG icons", "isPublic": true },
-    { "id": "ui_dash", "moduleId": "mod_ui_admin", "name": "Dashboard_Main", "type": "Screen", "description": "Map view of all trucks", "isPublic": false },
-    { "id": "ui_veh_det", "moduleId": "mod_ui_admin", "name": "Vehicle_Detail", "type": "Screen", "description": "Edit vehicle form", "isPublic": false },
-    { "id": "ui_myroute", "moduleId": "mod_ui_mobile", "name": "MyRoute_Screen", "type": "Screen", "description": "Driver daily list", "isPublic": false },
-    { "id": "ui_qr_scan", "moduleId": "mod_ui_mobile", "name": "ScanPackage", "type": "Screen", "description": "Camera integration", "isPublic": false }
+    {
+      "id": "ui-dashboard",
+      "moduleId": "mod-smart-pantry-app",
+      "name": "Dashboard",
+      "type": "Screen",
+      "archetype": "Dashboard",
+      "description": "Main overview. Contains 'Red Zone' expiration alerts.",
+      "isPublic": false,
+      "links": ["ui-scan", "ui-recipes", "ui-shopping", "ui-receipt-scan"],
+      "inputs": [],
+      "localVariables": [{ "id": "lv-stats", "name": "Stats", "dataType": "Record", "isList": false, "isMandatory": false }]
+    },
+    {
+      "id": "ui-scan",
+      "moduleId": "mod-smart-pantry-app",
+      "name": "ScanMode",
+      "type": "Screen",
+      "archetype": "Other",
+      "description": "Mobile Camera Overlay for Barcodes.",
+      "isPublic": false,
+      "links": ["ui-product-detail"],
+      "inputs": [],
+      "localVariables": []
+    },
+    {
+      "id": "ui-receipt-scan",
+      "moduleId": "mod-smart-pantry-app",
+      "name": "ScanReceipt",
+      "type": "Screen",
+      "archetype": "Other",
+      "description": "Upload photo for OCR processing.",
+      "isPublic": false,
+      "links": ["ui-inventory-list"],
+      "inputs": [],
+      "localVariables": [{ "id": "lv-img", "name": "Image", "dataType": "Binary", "isList": false, "isMandatory": false }]
+    },
+    {
+      "id": "ui-product-detail",
+      "moduleId": "mod-smart-pantry-app",
+      "name": "ProductDetail",
+      "type": "Screen",
+      "archetype": "CRUD_Detail",
+      "description": "View product info and history.",
+      "isPublic": false,
+      "links": ["ui-dashboard", "ui-shopping"],
+      "inputs": [{ "id": "in-pid", "name": "ProductId", "dataType": "LongInteger", "isList": false, "isMandatory": true }],
+      "localVariables": []
+    },
+    {
+      "id": "ui-recipes",
+      "moduleId": "mod-smart-pantry-app",
+      "name": "RecipeBook",
+      "type": "Screen",
+      "archetype": "CRUD_List",
+      "description": "Gallery of recipes with 'Cookable Now' filter.",
+      "isPublic": false,
+      "links": ["ui-dashboard"],
+      "inputs": [],
+      "localVariables": [{ "id": "lv-fil", "name": "OnlyCookable", "dataType": "Boolean", "isList": false, "isMandatory": false }]
+    },
+    {
+      "id": "ui-shopping",
+      "moduleId": "mod-smart-pantry-app",
+      "name": "ShoppingList",
+      "type": "Screen",
+      "archetype": "CRUD_List",
+      "description": "Items to buy. Shows Average Price Index.",
+      "isPublic": false,
+      "links": ["ui-dashboard"],
+      "inputs": [],
+      "localVariables": []
+    },
+    {
+      "id": "ui-inventory-list",
+      "moduleId": "mod-smart-pantry-app",
+      "name": "InventoryList",
+      "type": "Screen",
+      "archetype": "CRUD_List",
+      "description": "Manage pantry/fridge items.",
+      "isPublic": false,
+      "links": ["ui-dashboard"],
+      "inputs": [],
+      "localVariables": []
+    }
   ]
 }

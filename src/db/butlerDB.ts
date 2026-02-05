@@ -63,6 +63,15 @@ export interface LogicAction {
   edges: FlowEdge[];
 }
 
+// --- NEW UI STRUCTURES ---
+export type UIArchetype = 'CRUD_List' | 'CRUD_Detail' | 'Dashboard' | 'Home' | 'Login' | 'Popup' | 'Blank' | 'Other';
+
+export interface UIEvent {
+  id: string;
+  name: string;
+  description?: string;
+}
+
 export interface UIElement {
   id: string;
   moduleId: string;
@@ -70,6 +79,13 @@ export interface UIElement {
   type: 'Screen' | 'Block';
   description: string;
   isPublic: boolean;
+
+  // New Fields
+  archetype?: UIArchetype;
+  inputs?: Variable[];
+  localVariables?: Variable[];
+  events?: UIEvent[]; // For Blocks (Events triggered to parent)
+  links?: string[];   // IDs of other UI Elements this screen links to
 }
 
 // --- DEPENDENCIES ---
@@ -77,6 +93,8 @@ export interface DependencyElement {
   id: string;
   name: string;
   type: 'Entity' | 'Action' | 'UI';
+  // ODC Specific: Used to distinguish Weak (Service) vs Strong (Server) connections
+  subType?: 'ServiceAction' | 'ServerAction' | 'ClientAction';
 }
 
 export interface ModuleDependency {
@@ -92,14 +110,18 @@ export interface Project {
   createdAt: Date;
 }
 
-// STRICT 3-LAYER ARCHITECTURE
+// STRICT 3-LAYER ARCHITECTURE (O11)
 export type LayerType = 'End-User' | 'Core' | 'Foundation';
+
+// ODC ROLES
+export type ODCRole = 'App' | 'Library';
 
 export interface Module {
   id: string;
   projectId: string;
   name: string;
-  layer: LayerType;
+  layer: LayerType; // Maintained for O11
+  odcRole?: ODCRole; // New for ODC
   description: string;
   dependencies?: ModuleDependency[];
 }

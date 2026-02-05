@@ -28,7 +28,7 @@ const getLayoutedElements = (nodes: any[], edges: any[]) => {
     try {
         const g = new dagre.graphlib.Graph();
 
-        // FIX: Increased spacing to prevent overlapping
+
         g.setGraph({
             rankdir: 'TB',
             nodesep: 80, // Horizontal space between nodes
@@ -53,7 +53,7 @@ const getLayoutedElements = (nodes: any[], edges: any[]) => {
             return {
                 ...node,
                 position: {
-                    // FIX: Center offset uses the exact NODE_WIDTH
+
                     x: nodeWithPosition.x - (NODE_WIDTH / 2),
                     y: nodeWithPosition.y - (nodeWithPosition.height / 2),
                 },

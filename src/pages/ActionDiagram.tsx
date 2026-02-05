@@ -6,9 +6,9 @@ import {
     Background,
     useNodesState,
     useEdgesState,
-    MarkerType, // Value import
-    type Edge,  // Type import
-    type Node   // Type import
+    MarkerType, 
+    type Edge,  
+    type Node   
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import dagre from 'dagre';

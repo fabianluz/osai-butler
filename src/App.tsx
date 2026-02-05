@@ -11,6 +11,8 @@ import EntityEditor from './pages/EntityEditor';
 import ActionEditor from './pages/ActionEditor';
 import ModuleDiagram from './pages/ModuleDiagram';
 import ActionDiagram from './pages/ActionDiagram';
+import UIEditor from './pages/UIEditor';
+import UIFlow from './pages/UIFlow';
 
 // --- ICONS ---
 const Icons = {
@@ -31,7 +33,7 @@ const MASTER_PROMPT = `I am going to provide you with the JSON Context of an Out
 It contains:
 1. **Database Entities:** Defines the table schema, attributes, and relationships.
 2. **Logic Actions:** Defines Server/Client actions. The logic flows are described as a graph of "Nodes" (Steps) and "Connections" (Arrows).
-3. **UI Elements:** Defines the Screens and Blocks in the module.
+3. **UI Elements:** Defines the Screens and Blocks in the module, including Inputs, Local Variables, and Navigation Links.
 4. **Dependencies:** Lists exactly which Actions/Entities are consumed from other modules.
 
 **Your Task:**
@@ -41,6 +43,7 @@ It contains:
    - What is the domain of this app? (e.g., E-Commerce, HR).
    - What are the core tables?
    - What are the complex logic flows doing? (Trace the "nodes" and "connections").
+   - How do the screens connect? (Trace the "links").
    - How do the modules interact via dependencies?
 
 Confirm you are ready to receive the JSON context.`;
@@ -55,8 +58,6 @@ function ProjectList() {
   const navigate = useNavigate();
   const projects = useLiveQuery(() => db.projects.toArray());
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // --- ACTIONS ---
 
   const handleAddProject = async () => {
     if (!newProjectName.trim()) return;
@@ -85,7 +86,6 @@ function ProjectList() {
     await db.modules.where({ projectId: id }).delete();
   };
 
-  // --- EXPORT LOGIC (Full Backup) ---
   const handleExportProject = async (e: React.MouseEvent, project: Project) => {
     e.stopPropagation();
     const modules = await db.modules.where({ projectId: project.id }).toArray();
@@ -105,7 +105,7 @@ function ProjectList() {
     }
 
     const backupData = {
-      version: 2, // Version bump for new Dependency schema
+      version: 2,
       type: 'butler_project_backup',
       project,
       modules,
@@ -126,7 +126,7 @@ function ProjectList() {
 
   const handleImportClick = () => fileInputRef.current?.click();
 
-  // --- IMPORT LOGIC (Deep Import with ID Remapping) ---
+  // --- FIXED IMPORT LOGIC ---
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -139,8 +139,9 @@ function ProjectList() {
 
         const newProjId = uuidv4();
         const oldToNewModId: Record<string, string> = {};
+        const oldToNewUIId: Record<string, string> = {}; // 1. Create Lookup for UI
 
-        // 1. Create Project
+        // Create Project
         await db.projects.add({
           ...data.project,
           id: newProjId,
@@ -148,71 +149,62 @@ function ProjectList() {
           createdAt: new Date()
         });
 
-        // 2. Pre-process Modules to generate new IDs and build map
-        // We do this BEFORE adding to DB so we can fix dependencies
+        // Map Modules
         const newModules: Module[] = [];
         for (const mod of data.modules) {
           const newModId = uuidv4();
-          oldToNewModId[mod.id] = newModId; // Map Old -> New
+          oldToNewModId[mod.id] = newModId;
+          newModules.push({ ...mod, id: newModId, projectId: newProjId });
+        }
 
-          newModules.push({
-            ...mod,
-            id: newModId,
-            projectId: newProjId,
-            // We will fix dependencies in the next step
+        // Map UI IDs (Pre-calculation)
+        if (data.uiElements) {
+          data.uiElements.forEach((ui: any) => {
+            oldToNewUIId[ui.id] = uuidv4();
           });
         }
 
-        // 3. Fix Dependencies & Add Modules
+        // Save Modules (Fix Dependencies)
         for (const mod of newModules) {
-          // If the module has dependencies, we need to point them to the NEW IDs of the producers
           if (mod.dependencies) {
             // @ts-ignore
             mod.dependencies = mod.dependencies.map(dep => {
-              // Check if the producer is part of this import package
-              // If it is, swap the ID. If not (external ref?), keep original ID.
-              // For string-based legacy dependencies
-              if (typeof dep === 'string') {
-                return oldToNewModId[dep] || dep;
-              }
-              // For new Object-based dependencies
-              else {
-                return {
-                  ...dep,
-                  producerModuleId: oldToNewModId[dep.producerModuleId] || dep.producerModuleId
-                }
-              }
+              // Legacy support + Object support
+              if (typeof dep === 'string') return oldToNewModId[dep] || dep;
+              return {
+                ...dep,
+                producerModuleId: oldToNewModId[dep.producerModuleId] || dep.producerModuleId
+              };
             });
           }
           await db.modules.add(mod);
         }
 
-        // 4. Add Entities
-        for (const ent of data.entities) {
-          if (oldToNewModId[ent.moduleId]) {
-            await db.entities.add({ ...ent, id: uuidv4(), moduleId: oldToNewModId[ent.moduleId] });
-          }
-        }
+        // Save Content
+        for (const ent of data.entities) if (oldToNewModId[ent.moduleId]) await db.entities.add({ ...ent, id: uuidv4(), moduleId: oldToNewModId[ent.moduleId] });
+        for (const act of data.actions) if (oldToNewModId[act.moduleId]) await db.actions.add({ ...act, id: uuidv4(), moduleId: oldToNewModId[act.moduleId] });
 
-        // 5. Add Actions
-        for (const act of data.actions) {
-          if (oldToNewModId[act.moduleId]) {
-            await db.actions.add({ ...act, id: uuidv4(), moduleId: oldToNewModId[act.moduleId] });
-          }
-        }
-
-        // 6. Add UI Elements
+        // Save UI (Fix Links)
         if (data.uiElements) {
           for (const ui of data.uiElements) {
             if (oldToNewModId[ui.moduleId]) {
-              await db.uiElements.add({ ...ui, id: uuidv4(), moduleId: oldToNewModId[ui.moduleId] });
+              // Remap the 'links' array to use the new IDs
+              const newLinks = ui.links?.map((oldLink: string) => oldToNewUIId[oldLink]).filter(Boolean) || [];
+
+              await db.uiElements.add({
+                ...ui,
+                id: oldToNewUIId[ui.id], // Use mapped ID
+                moduleId: oldToNewModId[ui.moduleId],
+                links: newLinks
+              });
             }
           }
         }
 
-        alert("Project imported successfully with full architecture!");
+        alert("Project imported successfully! Links preserved.");
+        window.location.reload(); // Refresh to ensure IDs settle
       } catch (err) {
-        alert("Failed to import project. Invalid file.");
+        alert("Failed to import project.");
         console.error(err);
       }
     };
@@ -222,8 +214,7 @@ function ProjectList() {
 
   return (
     <div className="max-w-[1400px] mx-auto py-10 px-6">
-
-      {/* --- HEADER --- */}
+      {/* HEADER */}
       <header className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
         <div className="text-center md:text-left">
           <div className="flex items-center gap-3 justify-center md:justify-start mb-1">
@@ -234,30 +225,14 @@ function ProjectList() {
         </div>
 
         <div className="flex flex-wrap justify-center gap-3">
-          <button
-            onClick={() => setShowPromptModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 border border-purple-700 text-white rounded-lg hover:bg-purple-700 transition shadow-sm font-bold"
-            title="Get the Master Prompt for ChatGPT"
-          >
-            {Icons.Robot} Master Prompt
-          </button>
-          <button
-            onClick={() => setShowHelp(!showHelp)}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition shadow-sm font-medium"
-          >
-            {Icons.Help} Help
-          </button>
-          <button
-            onClick={handleImportClick}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-50 transition shadow-sm font-medium"
-          >
-            {Icons.Import} Import Project
-          </button>
+          <button onClick={() => setShowPromptModal(true)} className="flex items-center gap-2 px-4 py-2 bg-purple-600 border border-purple-700 text-white rounded-lg hover:bg-purple-700 transition shadow-sm font-bold">{Icons.Robot} Master Prompt</button>
+          <button onClick={() => setShowHelp(!showHelp)} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition shadow-sm font-medium">{Icons.Help} Help</button>
+          <button onClick={handleImportClick} className="flex items-center gap-2 px-4 py-2 bg-white border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-50 transition shadow-sm font-medium">{Icons.Import} Import Project</button>
           <input type="file" ref={fileInputRef} onChange={handleImportFile} accept=".butler,.json" className="hidden" />
         </div>
       </header>
 
-      {/* --- HELP BANNER --- */}
+      {/* HELP BANNER */}
       {showHelp && (
         <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 mb-8 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="flex justify-between items-start">
@@ -265,136 +240,60 @@ function ProjectList() {
             <button onClick={() => setShowHelp(false)} className="text-blue-400 hover:text-blue-700">✕</button>
           </div>
           <div className="grid md:grid-cols-3 gap-6 text-sm text-blue-800">
-            <div>
-              <strong className="block mb-1 text-blue-900">1. Create a Twin</strong>
-              <p>Create a <b>Project</b> and a <b>Module</b> here to match your OutSystems environment (O11/ODC).</p>
-            </div>
-            <div>
-              <strong className="block mb-1 text-blue-900">2. Define or Paste</strong>
-              <p>Inside a module, use <b>"Import"</b> to paste XML from Service Studio, or define Entities/Logic manually.</p>
-            </div>
-            <div>
-              <strong className="block mb-1 text-blue-900">3. Generate Prompt</strong>
-              <p>Click <b>"Copy for AI"</b> to get a perfect context prompt for ChatGPT, preventing hallucinations.</p>
-            </div>
+            <div><strong className="block mb-1 text-blue-900">1. Create a Twin</strong><p>Create a <b>Project</b> and a <b>Module</b> here to match your OutSystems environment (O11/ODC).</p></div>
+            <div><strong className="block mb-1 text-blue-900">2. Define or Paste</strong><p>Inside a module, use <b>"Import"</b> to paste XML from Service Studio, or define Entities/Logic manually.</p></div>
+            <div><strong className="block mb-1 text-blue-900">3. Generate Prompt</strong><p>Click <b>"Copy for AI"</b> to get a perfect context prompt for ChatGPT, preventing hallucinations.</p></div>
           </div>
         </div>
       )}
 
-      {/* --- CREATE BAR --- */}
+      {/* CREATE BAR */}
       <div className="bg-white p-2 rounded-xl shadow-sm border border-gray-200 mb-10 flex flex-col md:flex-row gap-2">
-        <select
-          value={selectedPlatform}
-          onChange={(e) => setSelectedPlatform(e.target.value as 'O11' | 'ODC')}
-          className="bg-gray-50 border-r border-gray-100 text-gray-700 font-semibold px-4 py-3 rounded-lg md:rounded-none md:rounded-l-lg outline-none focus:bg-gray-100 min-w-[100px]"
-          title="Select Platform Architecture"
-        >
+        <select value={selectedPlatform} onChange={(e) => setSelectedPlatform(e.target.value as 'O11' | 'ODC')} className="bg-gray-50 border-r border-gray-100 text-gray-700 font-semibold px-4 py-3 rounded-lg md:rounded-none md:rounded-l-lg outline-none focus:bg-gray-100 min-w-[100px]">
           <option value="O11">O11</option>
           <option value="ODC">ODC</option>
         </select>
-
-        <input
-          type="text"
-          placeholder="Enter new project name..."
-          className="flex-grow px-4 py-3 outline-none text-gray-700 placeholder-gray-400"
-          value={newProjectName}
-          onChange={(e) => setNewProjectName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleAddProject()}
-        />
-
-        <button
-          onClick={handleAddProject}
-          className="bg-gray-900 text-white px-8 py-3 rounded-lg font-bold hover:bg-black transition flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
-        >
-          {Icons.Add} Create
-        </button>
+        <input type="text" placeholder="Enter new project name..." className="flex-grow px-4 py-3 outline-none text-gray-700 placeholder-gray-400" value={newProjectName} onChange={(e) => setNewProjectName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddProject()} />
+        <button onClick={handleAddProject} className="bg-gray-900 text-white px-8 py-3 rounded-lg font-bold hover:bg-black transition flex items-center justify-center gap-2 shadow-md hover:shadow-lg">{Icons.Add} Create</button>
       </div>
 
-      {/* --- PROJECT GRID --- */}
+      {/* PROJECT GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {projects?.map((proj) => (
-          <div
-            key={proj.id}
-            onClick={() => navigate(`/project/${proj.id}`)}
-            className="group relative bg-white rounded-xl border border-gray-200 hover:border-blue-400 hover:shadow-lg transition-all duration-200 cursor-pointer overflow-hidden flex flex-col min-h-[160px]"
-          >
-            <div className={`absolute top-0 right-0 px-3 py-1 text-[10px] font-bold rounded-bl-lg uppercase tracking-wider
-              ${proj.platform === 'ODC' ? 'bg-purple-100 text-purple-700' : 'bg-red-100 text-red-700'}`}>
-              {proj.platform}
-            </div>
-
+          <div key={proj.id} onClick={() => navigate(`/project/${proj.id}`)} className="group relative bg-white rounded-xl border border-gray-200 hover:border-blue-400 hover:shadow-lg transition-all duration-200 cursor-pointer overflow-hidden flex flex-col min-h-[160px]">
+            <div className={`absolute top-0 right-0 px-3 py-1 text-[10px] font-bold rounded-bl-lg uppercase tracking-wider ${proj.platform === 'ODC' ? 'bg-purple-100 text-purple-700' : 'bg-red-100 text-red-700'}`}>{proj.platform}</div>
             <div className="p-6 flex-grow">
-              <div className="mb-2">
-                {proj.platform === 'ODC' ? Icons.ODC : Icons.O11}
-              </div>
+              <div className="mb-2">{proj.platform === 'ODC' ? Icons.ODC : Icons.O11}</div>
               <h3 className="text-xl font-bold text-gray-800 mb-1 group-hover:text-blue-600 transition">{proj.name}</h3>
               <p className="text-xs text-gray-400">Created {proj.createdAt.toLocaleDateString()}</p>
               <div className="mt-2 text-xs text-gray-400 line-clamp-2">{proj.description}</div>
             </div>
-
             <div className="bg-gray-50 border-t border-gray-100 px-6 py-3 flex justify-between items-center opacity-80 group-hover:opacity-100 transition">
-              <button
-                onClick={(e) => handleExportProject(e, proj)}
-                className="text-xs font-bold text-gray-500 hover:text-blue-600 flex items-center gap-1 transition"
-                title="Export Full Project Backup"
-              >
-                {Icons.Export} Backup
-              </button>
-              <button
-                onClick={(e) => handleDelete(e, proj.id)}
-                className="text-gray-300 hover:text-red-500 transition p-1 hover:bg-red-50 rounded"
-                title="Delete Project"
-              >
-                {Icons.Trash}
-              </button>
+              <button onClick={(e) => handleExportProject(e, proj)} className="text-xs font-bold text-gray-500 hover:text-blue-600 flex items-center gap-1 transition">{Icons.Export} Backup</button>
+              <button onClick={(e) => handleDelete(e, proj.id)} className="text-gray-300 hover:text-red-500 transition p-1 hover:bg-red-50 rounded">{Icons.Trash}</button>
             </div>
           </div>
         ))}
-
-        {projects?.length === 0 && (
-          <div className="col-span-full py-16 text-center border-2 border-dashed border-gray-200 rounded-xl bg-gray-50">
-            <div className="text-4xl mb-4">✨</div>
-            <h3 className="text-lg font-bold text-gray-600">No Projects Found</h3>
-            <p className="text-gray-400 text-sm">Create your first Digital Twin above or Import a backup.</p>
-          </div>
-        )}
       </div>
 
-      {/* --- MASTER PROMPT MODAL --- */}
+      {/* MASTER PROMPT MODAL */}
       {showPromptModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowPromptModal(false)}>
           <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
             <div className="p-6 border-b flex justify-between items-center bg-gray-50 rounded-t-xl">
-              <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                🤖 The Master Prompt
-              </h3>
+              <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">🤖 The Master Prompt</h3>
               <button onClick={() => setShowPromptModal(false)} className="text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
             </div>
-
             <div className="p-6 overflow-y-auto">
-              <p className="text-sm text-gray-600 mb-4">
-                Paste this into ChatGPT/Claude <b>BEFORE</b> you paste your module context. This teaches the LLM how to read the JSON format this app generates.
-              </p>
-              <div className="bg-gray-900 text-green-300 p-6 rounded-lg font-mono text-sm leading-relaxed whitespace-pre-wrap shadow-inner border border-gray-700">
-                {MASTER_PROMPT}
-              </div>
+              <p className="text-sm text-gray-600 mb-4">Paste this into ChatGPT/Claude <b>BEFORE</b> you paste your module context.</p>
+              <div className="bg-gray-900 text-green-300 p-6 rounded-lg font-mono text-sm leading-relaxed whitespace-pre-wrap shadow-inner border border-gray-700">{MASTER_PROMPT}</div>
             </div>
-
             <div className="p-6 border-t bg-gray-50 rounded-b-xl flex justify-end">
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(MASTER_PROMPT);
-                  alert("Prompt copied to clipboard!");
-                }}
-                className="bg-purple-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-purple-700 transition shadow-md flex items-center gap-2"
-              >
-                📋 Copy to Clipboard
-              </button>
+              <button onClick={() => { navigator.clipboard.writeText(MASTER_PROMPT); alert("Prompt copied to clipboard!"); }} className="bg-purple-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-purple-700 transition shadow-md flex items-center gap-2">📋 Copy to Clipboard</button>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }
@@ -409,8 +308,10 @@ function App() {
         <Route path="/module/:moduleId" element={<ModuleDetails />} />
         <Route path="/module/:moduleId/entity/:entityId" element={<EntityEditor />} />
         <Route path="/module/:moduleId/action/:actionId" element={<ActionEditor />} />
+        <Route path="/module/:moduleId/ui/:uiId" element={<UIEditor />} />
         <Route path="/module/:moduleId/diagram" element={<ModuleDiagram />} />
         <Route path="/module/:moduleId/action/:actionId/diagram" element={<ActionDiagram />} />
+        <Route path="/module/:moduleId/ui-flow" element={<UIFlow />} />
       </Routes>
     </div>
   );

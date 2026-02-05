@@ -1,33 +1,96 @@
-import { type Entity, type Module, type LogicAction, type UIElement } from '../db/butlerDB';
+import { type Entity, type Module, type LogicAction, type UIElement, type FlowNode, type FlowEdge } from '../db/butlerDB';
+
+
+const summarizeFlow = (nodes: FlowNode[], edges: FlowEdge[]): string => {
+    if (!nodes || nodes.length === 0) return "Empty Logic.";
+
+    
+    const labelMap = new Map(nodes.map(n => [n.id, n.label || n.type]));
+
+    
+    const steps = nodes.map(n => {
+        const outs = edges.filter(e => e.source === n.id);
+        let outText = "";
+
+        if (outs.length > 0) {
+            outText = " -> goes to: " + outs.map(e => {
+                const targetName = labelMap.get(e.target) || "Unknown";
+                return e.label ? `[${e.label}] ${targetName}` : targetName;
+            }).join(", ");
+        }
+
+        
+        let details = "";
+        if (n.type === 'If') details = " (Decision)";
+        if (n.type === 'Switch') details = " (Multiple Choice)";
+        if (n.type === 'Aggregate' || n.type === 'SQL') details = " (Data Fetch)";
+
+        
+        return `- Step "${n.label}" (${n.type})${details}${outText}`;
+    }).join("\n");
+
+    return steps;
+};
 
 export function generateModuleContext(
     module: Module,
     entities: Entity[],
     actions: LogicAction[] = [],
-    uiElements: UIElement[] = [], // <--- NEW PARAM
-    projectModules: Module[] = []
+    uiElements: UIElement[] = [],
+    projectModules: Module[] = [],
+    mode: 'Verbose' | 'Summary' = 'Verbose' 
 ) {
 
-    // Resolve Dependencies into Human Readable Format
+    
     const dependenciesReadable = (module.dependencies || []).map(dep => {
         const producer = projectModules.find(m => m.id === dep.producerModuleId);
         return {
-            producer_module: producer ? producer.name : "Unknown",
-            producer_layer: producer ? producer.layer : "Unknown",
-            consumed_elements: dep.elements.map(e => `${e.type}: ${e.name}`)
+            from: producer ? producer.name : "Unknown",
+            items: dep.elements.map(e => e.name) 
         };
     });
 
-    const context = {
-        context_type: "OutSystems_Module_Definition",
-        module_name: module.name,
-        module_description: module.description || "No description provided.",
-        layer: module.layer,
+    
+    if (mode === 'Summary') {
+        return JSON.stringify({
+            context_type: "OutSystems_Module_Summary",
+            module: module.name,
+            description: module.description,
+            dependencies: dependenciesReadable,
 
-        // 0. ARCHITECTURE & DEPENDENCIES
+            
+            entities: entities.map(e => `${e.name}: ${e.description} (${e.attributes.length} fields)`),
+
+            
+            logic: actions.map(act => ({
+                name: act.name,
+                description: act.description,
+                inputs: act.inputs.map(i => i.name),
+                outputs: act.outputs.map(o => o.name),
+                flow_narrative: summarizeFlow(act.nodes, act.edges) 
+            })),
+
+            
+            ui: uiElements.map(ui => ({
+                name: ui.name,
+                type: ui.type,
+                navigates_to: ui.links
+                    ? ui.links.map(id => uiElements.find(e => e.id === id)?.name)
+                    : []
+            }))
+        }, null, 2);
+    }
+
+    
+    const context = {
+        context_type: "OutSystems_Module_Definition_Full",
+        module_name: module.name,
+        module_description: module.description,
+        layer: module.layer,
+        platform: module.odcRole ? "ODC" : "O11",
+
         architecture_dependencies: dependenciesReadable,
 
-        // 1. DATA LAYER
         database: entities.map(ent => ({
             name: ent.name,
             description: ent.description,
@@ -37,7 +100,6 @@ export function generateModuleContext(
             )
         })),
 
-        // 2. LOGIC LAYER
         logic: actions.map(act => ({
             name: act.name,
             type: act.type,
@@ -45,16 +107,29 @@ export function generateModuleContext(
             is_public: act.isPublic,
             inputs: act.inputs.map(v => `${v.name} (${v.dataType})`),
             outputs: act.outputs.map(v => `${v.name} (${v.dataType})`),
-            flow_summary: act.flowSummary
+            flow_summary: act.flowSummary,
+            
+            nodes: act.nodes.map(n => ({ type: n.type, label: n.label, data: n.data })),
+            edges: act.edges.map(e => ({ source_node: e.source, target_node: e.target, label: e.label }))
         })),
 
-        // 3. UI LAYER (NEW)
-        ui_screens_blocks: uiElements.map(ui => ({
-            name: ui.name,
-            type: ui.type,
-            description: ui.description,
-            is_public: ui.isPublic
-        }))
+        ui_screens_blocks: uiElements.map(ui => {
+            const linkedScreenNames = ui.links
+                ? ui.links.map(linkId => uiElements.find(e => e.id === linkId)?.name || "UnknownScreen")
+                : [];
+
+            return {
+                name: ui.name,
+                type: ui.type,
+                archetype: ui.archetype || "Blank",
+                description: ui.description,
+                is_public: ui.isPublic,
+                inputs: ui.inputs?.map(v => `${v.name} (${v.dataType})`) || [],
+                local_vars: ui.localVariables?.map(v => `${v.name} (${v.dataType})`) || [],
+                events: ui.events?.map(e => e.name) || [],
+                navigates_to: linkedScreenNames
+            };
+        })
     };
 
     return JSON.stringify(context, null, 2);

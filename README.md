@@ -1,85 +1,121 @@
-
-
 # 🤖 OutSystems AI Butler
 
 **The missing link between Service Studio, Architecture Canvas, and Large Language Models.**
 
-OutSystems AI Butler acts as a **"Digital Twin"** and **Architecture Governance Tool** for your OutSystems environment (O11 or ODC). It bridges the gap between visual low-code development, rigid architectural standards, and text-based AI models (like ChatGPT, Claude, or DeepSeek).
+OutSystems AI Butler acts as a **"Digital Twin"** and **Architecture Governance Tool** for your OutSystems environment. It bridges the gap between visual low-code development, rigid architectural standards, and text-based AI models (like ChatGPT, Claude, or DeepSeek).
 
-By maintaining a structured mirror of your **Data**, **Logic**, **UI**, and **Module Dependencies** locally, this tool allows you to:
-
-1. **Visualize & Validate** your architecture against OutSystems best practices.
-2. **Export** token-efficient, hallucination-free context for AI.
-3. **Import** AI-generated code back into your workflow using compatible schemas.
+Whether you are building a Monolith in **O11** or Microservices in **ODC**, Butler ensures your AI assistant understands your specific context, dependencies, and architectural rules to generate hallucination-free code.
 
 ---
 
-## 🌟 Why use this?
+## 🌟 The Problem vs. The Solution
 
-LLMs are great at writing code, but they often fail at understanding **context** and **architecture**.
+LLMs are great at writing generic code, but they fail at understanding **your specific project context**.
 
-* **The Problem:** You ask an AI to "create a logic flow," but it invents tables that don't exist, references modules that create circular dependencies, or suggests placing core logic in the frontend layer.
-* **The Solution:** Butler provides the AI with a **strict JSON definition** of your entire project structure. The AI "sees" your entities, your available actions, and your layer rules, ensuring its output is valid and architecturally sound.
+- **The Problem:** You ask an AI to "create a logic flow," but it invents tables that don't exist, references modules that create circular dependencies, or suggests placing core logic in the frontend layer.
+- **The Solution:** Butler maintains a strict **JSON definition** of your project structure locally. It validates your architecture in real-time and feeds the AI a precise "System Manifest," ensuring every suggestion fits perfectly into your existing codebase.
 
 ---
 
 ## 🚀 Key Features
 
-### 🏛️ Architecture & Governance (NEW)
+### 🏛️ Dual-Mode Architecture Governance
 
-The app implements a real-time **Architecture Canvas** validator that enforces the **OutSystems 3-Layer Rules**:
+Butler creates a live diagram of your architecture and runs a real-time validator engine based on your platform choice:
 
-1. **Orchestration & Visualization:** Modules are visually grouped into **End-User**, **Core**, and **Foundation** layers.
-2. **Intelligent Dependency Graph:** Arrows are drawn automatically between modules:
-* **Gray Orthogonal Lines:** Valid references.
-* **Red Loop-Around Lines:** Invalid references (Violations).
+#### 1. OutSystems 11 (O11) Mode
 
+- **Structure:** Enforces the strict **3-Layer Canvas** (End-User, Core, Foundation).
+- **Governance Rules:**
+- ❌ **No Upward References:** Core cannot consume End-User.
+- ❌ **No Side References:** End-User cannot consume End-User.
+- ❌ **No Circular Dependencies.**
 
-3. **Real-Time Validation:** The "Governance Box" warns you immediately if you break a rule:
-* ❌ **No Upward References:** A Core module cannot consume an End-User module.
-* ❌ **No Side References (Top Layers):** End-User modules cannot consume each other.
-* ❌ **No Circular Dependencies:** A module cannot indirectly depend on itself.
+#### 2. OutSystems Developer Cloud (ODC) Mode
 
-
-
-### 📦 "Deep" Dependency Management
-
-Unlike standard diagrams that just show "Module A uses Module B," Butler tracks **Granular Dependencies**:
-
-* **Precision:** You select exactly *which* **Entities**, **Actions**, or **Screens** are consumed from a producer module.
-* **Context:** This granular data is fed to the LLM, so it knows *why* a dependency exists (e.g., "This module consumes `Order_CS` specifically for the `CreateOrder` action").
-
-### ⚡ Full-Stack Digital Twin
-
-* **Data Layer:** Define Entities, Attributes, and Relationships. Auto-generates ERDs.
-* **Logic Layer:** Visual Flowchart editor for Server Actions (Ifs, Loops, SQL, JS).
-* **UI Layer:** Define Screens and Blocks to map out your frontend.
-
-### 🤖 AI Integration
-
-* **Prompt Templates:** Built-in prompts to teach the AI how to read your specific architecture.
-* **One-Click Context:** Generates a highly optimized JSON prompt of your module (or the entire project) to paste into ChatGPT.
+- **Structure:** Domain-Driven Design using **Apps** (Vertical Slices) and **Libraries** (Shared Components).
+- **Governance Rules:**
+- ✅ **Weak References:** Apps _can_ talk to Apps via **Service Actions** (APIs).
+- ❌ **Data Isolation:** Apps _cannot_ read Entities from other Apps directly.
+- ❌ **Library Constraints:** Libraries must be stateless and cannot consume Apps.
 
 ---
 
-## 💾 Export & Import Ecosystem
+### 📦 The Digital Twin Editors
 
-This application supports two distinct types of data exchange: **Full Project Snapshots** and **Code Snippets**.
+Model your application locally before touching Service Studio.
 
-### 1. Full Project Backup (`.butler` JSON)
+#### 🗄️ Data Layer
 
-Use the **"Export Project"** button on the main dashboard to generate a `.butler` file.
+- **Entity Editor:** Define Attributes, Data Types, and Keys.
+- **Visual ERD:** Auto-generates Entity Relationship Diagrams with automatic connector lines based on Foreign Keys (`CustomerId` -> `Customer`).
 
-* **What it contains:** The entire project graph. Every Module, Entity, Action, UI Element, Description, and—crucially—the **Dependency Links** between them.
-* **Use Case:** Backups, sharing architecture with teammates, or feeding an **entire project context** to a very large context window LLM (like Claude 3 Opus or Gemini 1.5 Pro).
-* **Smart Import:** When importing a project, the system performs a **"Deep Remap"**: it regenerates UUIDs for every element but preserves the internal relationships, ensuring the dependency arrows still point to the correct modules in the new copy.
+#### ⚡ Logic Layer
+
+- **Visual Flow Editor:** A drag-and-drop canvas mimicking Service Studio.
+- **Node Support:** `Start`, `End`, `If`, `Switch`, `Aggregate`, `SQL`, `ServerAction`, `ServiceAction`.
+- **Flow Narratives:** Converts visual graphs into text-based logic narratives for LLM consumption.
+
+#### 🖥️ UI & Interaction Layer
+
+- **Screen Specs:** Define Inputs, Local Variables, and Archetypes (Dashboard, CRUD, Modal).
+- **User Flow Diagram:** A visual map showing how Screens connect and navigate to one another (`ScanMode` -> `ProductDetail`).
+
+---
+
+### 🤖 AI Integration & Context Management
+
+The core power of Butler is how it translates complex visual code into "LLM-Speak."
+
+#### 1. The "System Manifest" (Master Prompt)
+
+Click the **"Prompt Context"** button to generate a global architectural summary. This teaches the AI your system's high-level map (Module roles, Core entities, and API surfaces) before you ask specific questions.
+
+#### 2. Token-Optimized Contexts
+
+When copying module data for the AI, you can choose between two modes:
+
+- **⚡ Summary Mode:** Strips visual coordinates and internal IDs. Converts logic graphs into text stories. _Best for high-level architectural questions._
+- **📝 Verbose Mode:** Includes every pixel, attribute, and flow node. _Best for asking the AI to generate precise XML code._
+
+#### 3. Modular "Split" Export
+
+For large projects, sending the whole codebase hits token limits. The **"Split Modules"** export creates a ZIP file containing individual `.butler` context files for each module. You can feed the AI one module at a time while retaining global awareness.
+
+---
+
+## 📖 The "Architecture-First" Workflow
+
+### Phase 1: Definition
+
+1. Create a **Project** and select your platform (**O11** or **ODC**).
+2. Create **Modules/Apps**.
+3. Use the **Dependency Manager** to link them (e.g., "SmartPantry" consumes "VisionLib").
+4. Watch the **Governance Box**: It will turn RED if you violate an architectural rule (e.g., strong coupling between ODC apps).
+
+### Phase 2: Modeling
+
+1. Enter a module. Define your **Entities** and **Actions**.
+2. Use the **UI Editor** to define Screens and link them (creating a User Flow).
+3. Validate logic flows using the visual diagram.
+
+### Phase 3: AI Collaboration
+
+1. Click **"Prompt Context"** and paste the system overview into ChatGPT/Claude.
+2. Click **"✨ Copy for AI"** inside the specific module you are working on.
+3. **Prompt:** _"Based on the context provided, write the SQL query for the 'GetLowStock' action in the 'SmartPantry' module. Ensure it filters by the 'InventoryItem' entity defined in the data layer."_
+
+---
+
+## 💾 Import & Export Ecosystem
+
+### 1. Full Project Backup (`.butler`)
+
+A JSON snapshot of the entire system. Use this for backups or sharing architecture with teammates. The import engine performs a **Deep Remap**, generating new UUIDs while preserving all internal links and diagram layouts.
 
 ### 2. Code Snippet Import (XML)
 
-Use the **"📋 Import"** button inside a module to inject specific logic or data.
-
-* **Format:** A simplified XML schema based on the clipboard format.
-* **Use Case:** Taking a specific Action or Entity generated by ChatGPT and injecting it into your current module.
+You can paste XML directly from OutSystems Service Studio (Ctrl+C on an Action or Entity) to import existing legacy code into Butler.
 
 ---
 
@@ -87,99 +123,40 @@ Use the **"📋 Import"** button inside a module to inject specific logic or dat
 
 ### Prerequisites
 
-* **Node.js** (v18 or higher)
-* **npm** (included with Node.js)
+- **Node.js** (v18+)
+- **npm**
 
 ### Steps
 
 1. **Clone the Repository**
+
 ```bash
 git clone https://github.com/fabianluz/outsystems-ai-butler
 cd outsystems-ai-butler
 
 ```
 
-
 2. **Install Dependencies**
+
 ```bash
 npm install
-# Critical: Ensure graph and visualization libraries are installed
-npm install dagre @types/dagre @xyflow/react uuid dexie
+# Critical graph & utility libraries
+npm install @xyflow/react dagre dexie jszip file-saver uuid
 
 ```
 
-
 3. **Start the Application**
+
 ```bash
 npm run dev
 
 ```
 
-
 4. **Open in Browser**
-Navigate to `http://localhost:5173`.
+   Navigate to `http://localhost:5173`
 
 ---
 
-## 📖 The "Architecture-First" Workflow
+## 📄 License
 
-### Phase 1: Canvas Definition
-
-1. Create your modules and assign them to **Layers** (End-User, Core, Foundation).
-2. Use the **Dependency Inspector** (Info icon on module cards) to define relationships.
-3. Check the **Governance Box** at the top of the screen. If it's green ("The architecture canvas looks correct"), proceed. If it's red, fix the arrows.
-
-### Phase 2: Context Generation
-
-1. Enter a module.
-2. Define your Entities and Actions (or import them).
-3. Click **"✨ Copy for AI"**. This copies a JSON payload containing:
-* The module's schema.
-* **Architecture Context:** Which layer it is in and what it is allowed to see.
-* **Dependency Context:** Exact signatures of Actions/Entities available from other modules.
-
-
-
-### Phase 3: AI Development
-
-1. Paste the context into ChatGPT.
-2. Ask: *"Create a Server Action that uses the 'CreateOrder' dependency to save data, but validate the 'CustomerStatus' first."*
-3. The AI will use the **exact names** of your dependencies because they were provided in the context.
-
----
-
-## 📄 XML Schema for AI Interaction
-
-When asking an LLM to generate code for Butler, you can reference this structure:
-
-### Entities
-
-```xml
-<Entity Name="Customer" Description="Core Profile">
-    <Attributes>
-        <EntityAttribute Name="Id" Type="LongInteger" IsIdentifier="true" />
-        <EntityAttribute Name="Email" Type="Email" IsMandatory="true" />
-    </Attributes>
-</Entity>
-
-```
-
-### Server Actions
-
-```xml
-<ServerAction Name="ProcessOrder">
-    <InputParameter Name="OrderId" Type="LongInteger" />
-    <Flow>
-        <Start Name="Start" />
-        <SQL Name="GetTotal" SQL="SELECT Total FROM Orders WHERE Id = @OrderId" />
-        <If Name="IsHighValue">
-            <Condition>GetTotal.List.Current.Total > 1000</Condition>
-        </If>
-        <End Name="End" />
-        <Link Source="Start" Target="GetTotal" />
-        <Link Source="GetTotal" Target="IsHighValue" />
-        <Link Source="IsHighValue" Target="End" Label="True" />
-    </Flow>
-</ServerAction>
-
-```
+MIT License. Free to use for personal and enterprise architecture planning.
